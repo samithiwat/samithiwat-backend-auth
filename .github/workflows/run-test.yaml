@@ -1,0 +1,71 @@
+name: 'Pull request: Run test'
+
+on:
+  pull_request:
+    branches: [dev, master]
+
+jobs:
+  docker-build:
+    name: 'Run formated code check and test'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout branches
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: yarn --fronzen-lockfile
+
+      - name: Run linter
+        run: yarn lint:ci
+
+      - name: Annotate Code Linting Results
+        if: github.event_name == 'pull_request' && always()
+        uses: ataylorme/eslint-annotate-action@1.2.0
+        with:
+          repo-token: '${{ secrets.GITHUB_TOKEN }}'
+          report-json: 'eslint_report.json'
+
+      - name: Collect coverage
+        timeout-minutes: 5 # Times out after 5 minute
+        run: yarn test:ci --detectOpenHandles --forceExit
+
+      - name: Get the current branch name
+        if: github.event_name == 'push'
+        shell: bash
+        run: echo "::set-output name=branch::${GITHUB_REF#refs/heads/}"
+        id: current
+        env:
+          GITHUB_REF: ${{ github.ref }}
+
+      - name: Upload coverage to artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.current.outputs.branch }}
+          path: ./report.json
+
+      - name: Download coverage of target branch
+        if: github.event_name == 'pull_request'
+        uses: dawidd6/action-download-artifact@v2
+        continue-on-error: true
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: run-checks.yaml
+          workflow_conclusion: success
+          event: push
+          name: ${{ github.base_ref }}
+          branch: ${{ github.base_ref }}
+          path: base
+
+      - name: Extract code coverage
+        if: github.event_name == 'pull_request'
+        uses: ArtiomTr/jest-coverage-report-action@v2.0-rc.4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          package-manager: yarn
+          annotations: failed-tests
+          test-script: yarn test:ci --detectOpenHandles --forceExit
+          coverage-file: ./report.json
+          base-coverage-file: ./base/report.json
