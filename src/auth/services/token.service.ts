@@ -43,12 +43,14 @@ export class TokenService {
     }
   }
 
-  findAll() {
-    return `This action returns all auth`;
-  }
+  async findOne(id: number): Promise<TokenResponse> {
+    const token = await this.tokenRepository.findOne(id);
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
+    return new ResponseDto({
+      statusCode: token ? HttpStatus.OK : HttpStatus.NOT_FOUND,
+      errors: token ? null : ['Not found token'],
+      data: token ? token : null,
+    }) as TokenResponse;
   }
 
   update(id: number, updateAuthDto: UpdateAuthDto) {

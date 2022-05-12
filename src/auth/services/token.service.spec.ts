@@ -97,9 +97,9 @@ describe('TokenService', () => {
       });
       MockTokenRepository.save.mockResolvedValue(mockToken);
 
-      const token = await tokenService.create(mockTokenDto);
+      const res = await tokenService.create(mockTokenDto);
 
-      expect(token).toStrictEqual(want);
+      expect(res).toStrictEqual(want);
       expect(MockTokenRepository.save).toBeCalledWith(mockTokenDto);
       expect(MockTokenRepository.save).toBeCalledTimes(1);
     });
@@ -115,9 +115,9 @@ describe('TokenService', () => {
         throw new Error('Duplicated refresh token');
       });
 
-      const token = await tokenService.create(mockTokenDto);
+      const res = await tokenService.create(mockTokenDto);
 
-      expect(token).toStrictEqual(want);
+      expect(res).toStrictEqual(want);
       expect(MockTokenRepository.save).toBeCalledTimes(1);
       expect(MockTokenRepository.findOne).toBeCalledTimes(0);
     });
@@ -137,9 +137,9 @@ describe('TokenService', () => {
 
       mockTokenDto.accessToken = undefined;
 
-      const token = await tokenService.create(mockTokenDto);
+      const res = await tokenService.create(mockTokenDto);
 
-      expect(token).toStrictEqual(want);
+      expect(res).toStrictEqual(want);
       expect(MockTokenRepository.save).toBeCalledWith(mockTokenDto);
       expect(MockTokenRepository.save).toBeCalledTimes(1);
       expect(MockJwtService.generate).toBeCalledTimes(1);
@@ -160,12 +160,46 @@ describe('TokenService', () => {
 
       mockTokenDto.refreshToken = undefined;
 
-      const token = await tokenService.create(mockTokenDto);
+      const res = await tokenService.create(mockTokenDto);
 
-      expect(token).toStrictEqual(want);
+      expect(res).toStrictEqual(want);
       expect(MockTokenRepository.save).toBeCalledWith(mockTokenDto);
       expect(MockTokenRepository.save).toBeCalledTimes(1);
       expect(MockRefreshTokenService.generate).toBeCalledTimes(1);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return the token that find with id if success', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.OK,
+        errors: null,
+        data: mockToken,
+      });
+
+      MockTokenRepository.findOne.mockResolvedValue(mockToken);
+
+      const res = await tokenService.findOne(1);
+
+      expect(res).toStrictEqual(want);
+      expect(MockTokenRepository.findOne).toBeCalledWith(1);
+      expect(MockTokenRepository.findOne).toBeCalledTimes(1);
+    });
+
+    it('should throw error if not found token', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.NOT_FOUND,
+        errors: ['Not found token'],
+        data: null,
+      });
+
+      MockTokenRepository.findOne.mockResolvedValue(undefined);
+
+      const res = await tokenService.findOne(1);
+
+      expect(res).toStrictEqual(want);
+      expect(MockTokenRepository.findOne).toBeCalledWith(1);
+      expect(MockTokenRepository.findOne).toBeCalledTimes(1);
     });
   });
 });
