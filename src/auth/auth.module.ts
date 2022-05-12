@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
+import { Auth } from './entities/auth.entity';
 import { AuthService } from './services/auth.service';
 import { JwtService } from './services/jwt.service';
 import { RefreshTokenService } from './services/refresh-token.service';
@@ -16,6 +18,7 @@ import { RefreshTokenService } from './services/refresh-token.service';
       }),
       inject: [ConfigService],
     }),
+    TypeOrmModule.forFeature([Auth]),
   ],
   controllers: [AuthController],
   providers: [AuthService, RefreshTokenService, JwtService],
