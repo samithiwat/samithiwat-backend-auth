@@ -7,6 +7,7 @@ import { Auth } from './entities/auth.entity';
 import { AuthService } from './services/auth.service';
 import { JwtService } from './services/jwt.service';
 import { RefreshTokenService } from './services/refresh-token.service';
+import { TokenService } from './services/token.service';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { RefreshTokenService } from './services/refresh-token.service';
     TypeOrmModule.forFeature([Auth]),
   ],
   controllers: [AuthController],
+  providers: [AuthService, TokenService],
   providers: [AuthService, RefreshTokenService, JwtService],
 })
 export class AuthModule {}
