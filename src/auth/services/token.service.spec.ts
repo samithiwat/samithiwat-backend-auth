@@ -7,8 +7,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ServiceType } from 'src/common/enum/auth.enum';
 import { CreateTokenDto } from '../dto/create-token.dto';
 import { ResponseDto } from '../dto/response.dto';
+import { UpdateTokenDto } from '../dto/update-token.dto';
 import { Auth } from '../entities/auth.entity';
 import { Token } from '../entities/token.entity';
+import { TokenResponse } from '../interface/token.interface';
 import { JwtService } from './jwt.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { TokenService } from './token.service';
@@ -200,6 +202,65 @@ describe('TokenService', () => {
       expect(res).toStrictEqual(want);
       expect(MockTokenRepository.findOne).toBeCalledWith(1);
       expect(MockTokenRepository.findOne).toBeCalledTimes(1);
+    });
+  });
+
+  describe('update', () => {
+    it('should return token if success', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.OK,
+        errors: null,
+        data: mockToken,
+      });
+
+      MockTokenRepository.save.mockResolvedValue(mockToken);
+      MockTokenRepository.findOne.mockResolvedValue(want);
+
+      const dto = new UpdateTokenDto();
+      const res = await tokenService.update(1, dto);
+
+      expect(res).toStrictEqual(want);
+      expect(MockTokenRepository.findOne).toBeCalledWith(1);
+      expect(MockTokenRepository.findOne).toBeCalledTimes(1);
+      expect(MockTokenRepository.save).toBeCalledTimes(1);
+    });
+
+    it('should throw error if not found token', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.NOT_FOUND,
+        errors: ['Not found token'],
+        data: null,
+      }) as TokenResponse;
+
+      jest.spyOn(tokenService, 'findOne').mockResolvedValue(want);
+
+      const dto = new UpdateTokenDto();
+      const res = await tokenService.update(1, dto);
+
+      expect(res).toStrictEqual(want);
+      expect(tokenService.findOne).toBeCalledWith(1);
+      expect(tokenService.findOne).toBeCalledTimes(1);
+      expect(MockTokenRepository.save).toBeCalledTimes(0);
+    });
+
+    it('should throw error if refresh token is duplicated', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: ['Refresh token already exists'],
+        data: null,
+      });
+
+      MockTokenRepository.save.mockImplementation(() => {
+        throw new Error('Duplicated refresh token');
+      });
+
+      const dto = new UpdateTokenDto();
+      const res = await tokenService.update(1, dto);
+
+      expect(res).toStrictEqual(want);
+      expect(MockTokenRepository.findOne).toBeCalledWith(1);
+      expect(MockTokenRepository.findOne).toBeCalledTimes(1);
+      expect(MockTokenRepository.save).toBeCalledTimes(1);
     });
   });
 });

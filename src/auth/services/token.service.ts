@@ -53,8 +53,26 @@ export class TokenService {
     }) as TokenResponse;
   }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
+  async update(id: number, updateAuthDto: UpdateAuthDto) {
+    const searchResult = await this.findOne(id);
+
+    if (searchResult.statusCode !== HttpStatus.OK) {
+      return searchResult;
+    }
+
+    const res = new ResponseDto({
+      statusCode: HttpStatus.OK,
+      errors: null,
+      data: null,
+    });
+    try {
+      const token = await this.tokenRepository.save({ id, ...updateAuthDto });
+      res.data = token;
+    } catch (err) {
+      res.errors = ['Refresh token already exists'];
+      res.statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
+    }
+    return res;
   }
 
   remove(id: number) {
