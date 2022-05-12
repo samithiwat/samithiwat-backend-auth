@@ -19,6 +19,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/migration.ts",
+    "typeorm:gen": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/migration.ts migration:generate -n",
+    "typeorm:create": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/migration.ts migration:create -n",
+    "typeorm:run": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/migration.ts migration:run",
+    "typeorm:revert": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/migration.ts migration:revert",
+    "typeorm:prod": "node ./node_modules/typeorm/cli.js --config dist/config/typeorm.js migration:run",
     "ci": "yarn && yarn format && yarn lint",
     "lint:ci": "eslint --output-file eslint_report.json --format json src",
     "test:ci": "jest --coverage --ci --testLocationInResults --json --outputFile=\"report.json\""
@@ -32,10 +38,13 @@
     "@nestjs/mapped-types": "^1.0.1",
     "@nestjs/microservices": "^8.4.4",
     "@nestjs/platform-express": "^8.0.0",
+    "@nestjs/typeorm": "^8.0.3",
     "dotenv": "^16.0.1",
+    "mysql2": "^2.3.3",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
-    "rxjs": "^7.2.0"
+    "rxjs": "^7.2.0",
+    "typeorm": "0.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^8.0.0",
