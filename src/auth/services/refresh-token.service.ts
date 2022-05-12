@@ -1,26 +1,26 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from '../dto/create-auth.dto';
-import { UpdateAuthDto } from '../dto/update-auth.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
+import { Token } from '../entities/token.entity';
 
 @Injectable()
 export class RefreshTokenService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(@InjectRepository(Token) private readonly tokenRepository: Repository<Token>) {}
+
+  async verify(refreshToken: string): Promise<Token> {
+    // refresh token must decoded
+    const token = await this.tokenRepository.findOne({ refreshToken }, { relations: ['auth'] });
+
+    return token ? token : null;
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async generate(): Promise<string> {
+    return uuidv4();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
-
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  async clear(refreshToken: string): Promise<void> {
+    // refresh token must existed
+    await this.tokenRepository.softDelete({ refreshToken });
   }
 }
