@@ -9,7 +9,7 @@ import { Auth } from '../entities/auth.entity';
 export class JwtService {
   constructor(
     @InjectRepository(Auth) private authRepository: Repository<Auth>,
-    private jwtService: Jwt,
+    private readonly jwtService: Jwt,
   ) {}
 
   async decode(token: string): Promise<TokenPayload> {
@@ -20,11 +20,11 @@ export class JwtService {
     return this.authRepository.findOne({ id: decode.id });
   }
 
-  async generateToken(auth: Auth): Promise<string> {
+  async generate(auth: Auth): Promise<string> {
     return this.jwtService.sign({ id: auth.id });
   }
 
-  async verifyToken(token: string): Promise<TokenPayload> {
+  async verify(token: string): Promise<TokenPayload> {
     return this.jwtService.verify(token);
   }
 }
