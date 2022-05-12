@@ -53,29 +53,32 @@ export class TokenService {
     }) as TokenResponse;
   }
 
-  async update(id: number, updateAuthDto: UpdateAuthDto) {
+  async update(id: number, updateAuthDto: UpdateAuthDto): Promise<TokenResponse> {
     const searchResult = await this.findOne(id);
 
     if (searchResult.statusCode !== HttpStatus.OK) {
       return searchResult;
     }
 
-    const res = new ResponseDto({
-      statusCode: HttpStatus.OK,
-      errors: null,
-      data: null,
-    });
     try {
       const token = await this.tokenRepository.save({ id, ...updateAuthDto });
-      res.data = token;
+      searchResult.data = token;
     } catch (err) {
-      res.errors = ['Refresh token already exists'];
-      res.statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
+      searchResult.statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
+      searchResult.errors = ['Refresh token already exists'];
+      searchResult.data = null;
     }
-    return res;
+    return searchResult;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  async remove(id: number): Promise<TokenResponse> {
+    const res = await this.findOne(id);
+
+    if (res.statusCode !== HttpStatus.OK) {
+      return res;
+    }
+
+    await this.tokenRepository.softDelete(id);
+    return res;
   }
 }

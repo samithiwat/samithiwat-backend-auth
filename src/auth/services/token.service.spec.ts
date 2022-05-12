@@ -263,4 +263,41 @@ describe('TokenService', () => {
       expect(MockTokenRepository.save).toBeCalledTimes(1);
     });
   });
+
+  describe('delete', () => {
+    it('should return token if success', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.OK,
+        errors: null,
+        data: mockToken,
+      }) as TokenResponse;
+
+      jest.spyOn(tokenService, 'findOne').mockResolvedValue(want);
+
+      const res = await tokenService.remove(1);
+
+      expect(res).toStrictEqual(want);
+      expect(tokenService.findOne).toBeCalledWith(1);
+      expect(tokenService.findOne).toBeCalledTimes(1);
+      expect(MockTokenRepository.softDelete).toBeCalledWith(1);
+      expect(MockTokenRepository.softDelete).toBeCalledTimes(1);
+    });
+
+    it('should throw error if not found token', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.NOT_FOUND,
+        errors: ['Not found token'],
+        data: null,
+      }) as TokenResponse;
+
+      jest.spyOn(tokenService, 'findOne').mockResolvedValue(want);
+
+      const res = await tokenService.remove(1);
+
+      expect(res).toStrictEqual(want);
+      expect(tokenService.findOne).toBeCalledWith(1);
+      expect(tokenService.findOne).toBeCalledTimes(1);
+      expect(MockTokenRepository.softDelete).toBeCalledTimes(0);
+    });
+  });
 });
