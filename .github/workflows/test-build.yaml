@@ -2,7 +2,7 @@ name: 'Pull request: Build test'
 
 on:
   pull_request:
-    branches: [dev, master]
+    branches: [dev, master, features/**]
 
 jobs:
   docker-build:
