@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
 import { Auth } from './entities/auth.entity';
+import { Token } from './entities/token.entity';
 import { AuthService } from './services/auth.service';
 import { JwtService } from './services/jwt.service';
 import { RefreshTokenService } from './services/refresh-token.service';
@@ -19,7 +20,7 @@ import { TokenService } from './services/token.service';
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Auth]),
+    TypeOrmModule.forFeature([Auth, Token]),
   ],
   controllers: [AuthController],
   providers: [AuthService, RefreshTokenService, JwtService, TokenService],
