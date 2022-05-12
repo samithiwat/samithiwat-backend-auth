@@ -3,8 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './services/auth.service';
-import { RefreshTokenService } from './services/refresh-token.service';
 import { JwtService } from './services/jwt.service';
+import { RefreshTokenService } from './services/refresh-token.service';
 
 @Module({
   imports: [
@@ -18,7 +18,6 @@ import { JwtService } from './services/jwt.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, RefreshTokenService],
-  providers: [AuthService, JwtService],
+  providers: [AuthService, RefreshTokenService, JwtService],
 })
 export class AuthModule {}
