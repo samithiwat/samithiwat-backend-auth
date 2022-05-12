@@ -22,7 +22,6 @@ import { TokenService } from './services/token.service';
     TypeOrmModule.forFeature([Auth]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TokenService],
-  providers: [AuthService, RefreshTokenService, JwtService],
+  providers: [AuthService, RefreshTokenService, JwtService, TokenService],
 })
 export class AuthModule {}
