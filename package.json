@@ -18,7 +18,10 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "ci": "yarn && yarn format && yarn lint",
+    "lint:ci": "eslint --output-file eslint_report.json --format json src",
+    "test:ci": "jest --coverage --ci --testLocationInResults --json --outputFile=\"report.json\""
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.6.7",
