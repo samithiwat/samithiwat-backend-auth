@@ -1,4 +1,6 @@
+import { HttpStatus } from '@nestjs/common';
+
 export interface BaseResponse {
-  statusCode: number;
+  statusCode: HttpStatus;
   errors: string[];
 }
