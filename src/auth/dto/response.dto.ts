@@ -1,8 +1,9 @@
+import { HttpStatus } from '@nestjs/common';
 import { Auth } from '../entities/auth.entity';
 import { Token } from '../entities/token.entity';
 
 export class ResponseDto {
-  statusCode: number;
+  statusCode: HttpStatus;
   errors: string[];
   data: Token | Auth;
 
