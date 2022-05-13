@@ -29,6 +29,10 @@ const MockRefreshTokenService = {
   generate: jest.fn(),
 };
 
+const MockConfigService = {
+  get: jest.fn(),
+};
+
 describe('TokenService', () => {
   let tokenService: TokenService;
   let mockTokenDto: CreateTokenDto;
@@ -59,6 +63,10 @@ describe('TokenService', () => {
         {
           provide: getRepositoryToken(Token),
           useValue: MockTokenRepository,
+        },
+        {
+          provide: ConfigService,
+          useValue: MockConfigService,
         },
       ],
     }).compile();
@@ -91,19 +99,42 @@ describe('TokenService', () => {
   });
 
   describe('create', () => {
-    it('should return auth when success', async () => {
+    it('should return token when success (app token)', async () => {
       const want = new ResponseDto({
         statusCode: HttpStatus.CREATED,
         errors: null,
         data: mockToken,
       });
       MockTokenRepository.save.mockResolvedValue(mockToken);
+      mockToken.refreshToken = faker.lorem.word();
+      (want.data as Token).refreshToken = mockToken.refreshToken;
+      jest.spyOn(tokenService, 'encode').mockResolvedValue(mockToken.refreshToken);
 
       const res = await tokenService.create(mockTokenDto);
 
       expect(res).toStrictEqual(want);
       expect(MockTokenRepository.save).toBeCalledWith(mockTokenDto);
       expect(MockTokenRepository.save).toBeCalledTimes(1);
+      expect(tokenService.encode).toBeCalledTimes(1);
+    });
+
+    it('should return token when success (third party token)', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.CREATED,
+        errors: null,
+        data: mockToken,
+      });
+      MockTokenRepository.save.mockResolvedValue(mockToken);
+      mockToken.refreshToken = faker.lorem.word();
+      mockToken.serviceType = ServiceType.GOOGLE;
+      jest.spyOn(tokenService, 'encode').mockResolvedValue(mockToken.refreshToken);
+
+      const res = await tokenService.create(mockTokenDto);
+
+      expect(res).toStrictEqual(want);
+      expect(MockTokenRepository.save).toBeCalledWith(mockTokenDto);
+      expect(MockTokenRepository.save).toBeCalledTimes(1);
+      expect(tokenService.encode).toBeCalledTimes(0);
     });
 
     it('should throw error if refresh token is duplicated', async () => {
@@ -136,6 +167,7 @@ describe('TokenService', () => {
 
       MockJwtService.generate.mockResolvedValue(newAccessToken);
       MockTokenRepository.save.mockResolvedValue(mockToken);
+      jest.spyOn(tokenService, 'encode').mockResolvedValue(mockToken.refreshToken);
 
       mockTokenDto.accessToken = undefined;
 
@@ -159,6 +191,7 @@ describe('TokenService', () => {
 
       MockRefreshTokenService.generate.mockResolvedValue(newRefreshToken);
       MockTokenRepository.save.mockResolvedValue(mockToken);
+      jest.spyOn(tokenService, 'encode').mockResolvedValue(mockToken.refreshToken);
 
       mockTokenDto.refreshToken = undefined;
 

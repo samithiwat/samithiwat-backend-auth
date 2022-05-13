@@ -1,5 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto-js';
+import * as moment from 'moment';
+import { ServiceType } from 'src/common/enum/auth.enum';
 import { Repository } from 'typeorm';
 import { CreateTokenDto } from '../dto/create-token.dto';
 import { ResponseDto } from '../dto/response.dto';
@@ -15,9 +20,11 @@ export class TokenService {
     @InjectRepository(Token) private readonly tokenRepository: Repository<Token>,
     private readonly jwtService: JwtService,
     private readonly refreshTokenService: RefreshTokenService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(createTokenDto: CreateTokenDto): Promise<TokenResponse> {
+    // Token is already formatted
     const res = new ResponseDto({
       statusCode: HttpStatus.CREATED,
       errors: null,
@@ -32,15 +39,25 @@ export class TokenService {
       ? createTokenDto.refreshToken
       : await this.refreshTokenService.generate();
 
+    createTokenDto.expiresDate = createTokenDto.expiresDate
+      ? createTokenDto.expiresDate
+      : moment()
+          .add(parseInt(this.configService.get<string>('jwt.tokenDuration')), 's')
+          .toDate();
+
     try {
       const token = await this.tokenRepository.save(createTokenDto);
+
+      if (token.serviceType === ServiceType.APP) {
+        token.refreshToken = await this.encode(token.refreshToken);
+      }
+
       res.data = token;
-      return res;
     } catch (err) {
       res.statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
       res.errors = ['Refresh token already exists'];
-      return res;
     }
+    return res;
   }
 
   async findOne(id: number): Promise<TokenResponse> {
@@ -80,5 +97,24 @@ export class TokenService {
 
     await this.tokenRepository.softDelete(id);
     return res;
+  }
+
+  async encode(token: string): Promise<string> {
+    return crypto.AES.encrypt(token, this.configService.get<string>('jwt.secret')).toString();
+  }
+
+  async decode(token: string): Promise<string> {
+    return crypto.AES.decrypt(token, this.configService.get<string>('jwt.secret')).toString(
+      crypto.enc.Utf8,
+    );
+  }
+
+  async hashPassword(password: string): Promise<string> {
+    const salt: string = await bcrypt.genSalt(10);
+    return bcrypt.hash(password, salt);
+  }
+
+  async isValidPassword(password: string, hashedPassword: string): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
   }
 }
