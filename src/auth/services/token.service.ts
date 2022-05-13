@@ -24,7 +24,7 @@ export class TokenService {
   ) {}
 
   async create(createTokenDto: CreateTokenDto): Promise<TokenResponse> {
-    // Token is already formatted
+    // Token is already encoded
     const res = new ResponseDto({
       statusCode: HttpStatus.CREATED,
       errors: null,
