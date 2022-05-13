@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ClientsModule, ClientsModuleAsyncOptions, Transport } from '@nestjs/microservices';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 import { UserService } from './user.service';
 
-let option: ClientsModuleAsyncOptions;
 @Module({
   imports: [
     ClientsModule.registerAsync([
