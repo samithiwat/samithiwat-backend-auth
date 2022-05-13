@@ -2,7 +2,7 @@ name: 'Pull request: Run test'
 
 on:
   pull_request:
-    branches: [dev, master]
+    branches: [dev, master, features/**]
 
 permissions:
   contents: write
