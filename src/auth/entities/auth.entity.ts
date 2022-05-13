@@ -16,7 +16,7 @@ export class Auth extends BaseEntity {
   @Column({ name: 'user_id', nullable: true })
   userId: number;
 
-  constructor(partial: Partial<BaseEntity>) {
+  constructor(partial: Partial<Auth>) {
     super(partial);
     Object.assign(this, partial);
   }
