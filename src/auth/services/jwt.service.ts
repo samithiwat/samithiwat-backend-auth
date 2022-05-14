@@ -17,7 +17,7 @@ export class JwtService {
   }
 
   async findFromPayload(decode: TokenPayload): Promise<Auth> {
-    return this.authRepository.findOne({ userId: decode.id });
+    return this.authRepository.findOne({ id: decode.id });
   }
 
   async generate(auth: Auth): Promise<string> {
