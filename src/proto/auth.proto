@@ -62,7 +62,7 @@ message ValidateRequest{
 message ValidateResponse{
   int32 StatusCode = 1;
   repeated string errors = 2;
-  repeated dto.TokenPayload data = 3;
+  uint32 data = 3;
 }
 
 // Redeem Refresh Token

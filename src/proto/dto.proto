@@ -106,7 +106,3 @@ message Login{
   string username = 1;
   string password = 2;
 }
-
-message TokenPayload{
-  uint32 userId = 1;
-}
