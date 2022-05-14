@@ -23,8 +23,4 @@ export class JwtService {
   async generate(auth: Auth): Promise<string> {
     return this.jwtService.sign({ id: auth.id });
   }
-
-  async verify(token: string): Promise<TokenPayload> {
-    return this.jwtService.verify(token);
-  }
 }

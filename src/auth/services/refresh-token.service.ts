@@ -18,9 +18,4 @@ export class RefreshTokenService {
   async generate(): Promise<string> {
     return uuidv4();
   }
-
-  async clear(refreshToken: string): Promise<void> {
-    // refresh token must existed
-    await this.tokenRepository.softDelete({ refreshToken });
-  }
 }
