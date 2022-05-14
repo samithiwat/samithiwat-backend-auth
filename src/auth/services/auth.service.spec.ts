@@ -284,7 +284,10 @@ describe('AuthService', () => {
       const credentials = await service.login(mockLoginDto);
 
       expect(credentials).toStrictEqual(want);
-      expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
+      expect(MockAuthRepository.findOne).toBeCalledWith(
+        { email: mockLoginDto.email },
+        { relations: ['tokens'] },
+      );
       expect(service.isValidPassword).toBeCalledWith(mockLoginDto.password, mockAuth.password);
       expect(MockJwtService.generate).toBeCalledWith(mockAuth);
       expect(service.storeToken).toBeCalledWith(mockAuth, mockTokenDto);
@@ -305,7 +308,10 @@ describe('AuthService', () => {
       const res = await service.login(mockLoginDto);
 
       expect(res).toStrictEqual(want);
-      expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
+      expect(MockAuthRepository.findOne).toBeCalledWith(
+        { email: mockLoginDto.email },
+        { relations: ['tokens'] },
+      );
       expect(service.isValidPassword).toBeCalledWith(mockLoginDto.password, mockAuth.password);
       expect(MockJwtService.generate).toBeCalledTimes(0);
       expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
@@ -328,7 +334,10 @@ describe('AuthService', () => {
       const credentials = await service.login(mockLoginDto);
 
       expect(credentials).toStrictEqual(want);
-      expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
+      expect(MockAuthRepository.findOne).toBeCalledWith(
+        { email: mockLoginDto.email },
+        { relations: ['tokens'] },
+      );
       expect(service.isValidPassword).toBeCalledTimes(0);
       expect(MockJwtService.generate).toBeCalledTimes(0);
       expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
@@ -349,7 +358,10 @@ describe('AuthService', () => {
       const credentials = await service.login(mockLoginDto);
 
       expect(credentials).toStrictEqual(want);
-      expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
+      expect(MockAuthRepository.findOne).toBeCalledWith(
+        { email: mockLoginDto.email },
+        { relations: ['tokens'] },
+      );
       expect(service.isValidPassword).toBeCalledWith(mockLoginDto.password, mockAuth.password);
       expect(MockJwtService.generate).toBeCalledTimes(0);
       expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
