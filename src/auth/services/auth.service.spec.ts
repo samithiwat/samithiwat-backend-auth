@@ -1,16 +1,23 @@
 import faker from '@faker-js/faker';
 import { HttpStatus } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
+import { ServiceType } from 'src/common/enum/auth.enum';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { UserService } from 'src/user/user.service';
 import { UserDto } from '../../user/user.interface';
+import { CreateTokenDto } from '../dto/create-token.dto';
 import { CredentialDto } from '../dto/credential.dto';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ResponseDto } from '../dto/response.dto';
 import { Auth } from '../entities/auth.entity';
+import { Token } from '../entities/token.entity';
 import { AuthService } from './auth.service';
+import { JwtService } from './jwt.service';
+import { RefreshTokenService } from './refresh-token.service';
 import { TokenService } from './token.service';
 
 const MockAuthRepository = {
@@ -23,22 +30,38 @@ const MockTokenService = {
   findOne: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
+  encode: jest.fn(),
+  decode: jest.fn(),
+  hashPassword: jest.fn(),
+  isValidPassword: jest.fn(),
 };
 
 const MockUserService = {
   create: jest.fn(),
 };
 
-// const MockJwtService = {
+const MockJwtService = {
+  decode: jest.fn(),
+  findFromPayload: jest.fn(),
+  generate: jest.fn(),
+  verify: jest.fn(),
+};
 
-// }
+const MockRefreshTokenService = {
+  generate: jest.fn(),
+  verify: jest.fn(),
+  clear: jest.fn(),
+};
+
+const MockConfigService = {
+  get: jest.fn(),
+};
 
 describe('AuthService', () => {
   let service: AuthService;
   let mockRegisterDto: RegisterDto;
   let mockLoginDto: LoginDto;
   let mockAuth: Auth;
-  let mockCredential: CredentialDto;
   let mockUser: UserDto;
 
   beforeEach(async () => {
@@ -57,6 +80,18 @@ describe('AuthService', () => {
           provide: UserService,
           useValue: MockUserService,
         },
+        {
+          provide: JwtService,
+          useValue: MockJwtService,
+        },
+        {
+          provide: RefreshTokenService,
+          useValue: MockRefreshTokenService,
+        },
+        {
+          provide: ConfigService,
+          useValue: MockConfigService,
+        },
       ],
     }).compile();
 
@@ -74,16 +109,10 @@ describe('AuthService', () => {
       imageUrl: faker.internet.url(),
     });
 
-    mockCredential = new CredentialDto({
-      accessToken: faker.lorem.word(),
-      refreshToken: faker.lorem.word(),
-      expiresIn: faker.datatype.number(30000),
-    });
-
     mockAuth = new Auth({
       id: 1,
       email: faker.internet.email(),
-      password: faker.internet.password(),
+      password: bcrypt.hashSync(faker.internet.password(), 10),
       isEmailVerified: false,
       userId: 1,
     });
@@ -123,6 +152,7 @@ describe('AuthService', () => {
 
       MockUserService.create.mockResolvedValue(want);
       MockAuthRepository.save.mockResolvedValue(mockAuth);
+      MockTokenService.hashPassword.mockResolvedValue(mockRegisterDto.password);
 
       const user = await service.register(mockRegisterDto);
 
@@ -131,6 +161,9 @@ describe('AuthService', () => {
       expect(MockUserService.create).toBeCalledTimes(1);
       expect(MockAuthRepository.save).toBeCalledWith(mockRegisterDto);
       expect(MockAuthRepository.save).toBeCalledTimes(1);
+      expect(MockUserService.create).toBeCalledTimes(1);
+      expect(MockTokenService.hashPassword).toBeCalledWith(mockRegisterDto.password);
+      expect(MockTokenService.hashPassword).toBeCalledTimes(1);
     });
 
     it('should throw error if email is already existed', async () => {
@@ -148,11 +181,14 @@ describe('AuthService', () => {
 
       MockUserService.create.mockResolvedValue(userRes);
       MockAuthRepository.save.mockRejectedValue(new Error('Duplicated Email'));
+      MockTokenService.hashPassword.mockResolvedValue(mockRegisterDto.password);
 
       const user = await service.register(mockRegisterDto);
 
       expect(user).toStrictEqual(want);
       expect(MockUserService.create).toBeCalledTimes(0);
+      expect(MockTokenService.hashPassword).toBeCalledWith(mockRegisterDto.password);
+      expect(MockTokenService.hashPassword).toBeCalledTimes(1);
       expect(MockAuthRepository.save).toBeCalledTimes(1);
       expect(MockAuthRepository.save).toBeCalledWith(mockRegisterDto);
     });
@@ -160,23 +196,109 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('should return credentials if success', async () => {
+      const accessToken = faker.lorem.word();
+      const refreshToken = faker.lorem.word();
+
+      const mockTokenDto = new CreateTokenDto({
+        serviceType: ServiceType.APP,
+        accessToken,
+        refreshToken,
+      });
+
+      const tokenRes = new ResponseDto({
+        statusCode: HttpStatus.CREATED,
+        errors: null,
+        data: new Token({
+          id: 1,
+          serviceType: ServiceType.APP,
+          accessToken,
+          refreshToken,
+        }),
+      });
+
       const want = new ResponseDto({
         statusCode: HttpStatus.OK,
         errors: null,
-        data: mockCredential,
+        data: new CredentialDto({
+          accessToken,
+          refreshToken,
+          expiresIn: 3600,
+        }),
       });
 
-      // const mockTokenDto = new CreateTokenDto({});
-
-      MockTokenService.create.mockResolvedValue(want);
       MockAuthRepository.findOne.mockResolvedValue(mockAuth);
+      MockTokenService.isValidPassword.mockResolvedValue(true);
+      MockJwtService.generate.mockResolvedValue(accessToken);
+      MockRefreshTokenService.generate.mockResolvedValue(refreshToken);
+      MockTokenService.create.mockResolvedValue(tokenRes);
+      MockConfigService.get.mockReturnValue('3600s');
+
+      const credentials = await service.login(mockLoginDto);
+
+      expect(credentials).toStrictEqual(want);
+      expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
+      expect(MockTokenService.isValidPassword).toBeCalledWith(
+        mockLoginDto.password,
+        mockAuth.password,
+      );
+      expect(MockTokenService.isValidPassword).toBeCalledTimes(1);
+      expect(MockAuthRepository.findOne).toBeCalledTimes(1);
+      expect(MockJwtService.generate).toBeCalledTimes(1);
+      expect(MockJwtService.generate).toBeCalledWith(mockAuth);
+      expect(MockRefreshTokenService.generate).toBeCalledTimes(1);
+      expect(MockTokenService.create).toBeCalledWith(mockTokenDto);
+      expect(MockTokenService.create).toBeCalledTimes(1);
+      expect(MockConfigService.get).toBeCalledWith('jwt.tokenDuration');
+      expect(MockConfigService.get).toBeCalledTimes(1);
+    });
+
+    it('should throw error if not found email', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.UNAUTHORIZED,
+        errors: ['Invalid email or password'],
+        data: null,
+      });
+
+      mockAuth.password = bcrypt.hashSync(mockAuth.password, 10);
+
+      MockAuthRepository.findOne.mockResolvedValue(undefined);
 
       const credentials = await service.login(mockLoginDto);
 
       expect(credentials).toStrictEqual(want);
       expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
       expect(MockAuthRepository.findOne).toBeCalledTimes(1);
-      expect(MockTokenService.create).toBeCalledWith();
+      expect(MockTokenService.isValidPassword).toBeCalledTimes(0);
+      expect(MockJwtService.generate).toBeCalledTimes(0);
+      expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
+      expect(MockTokenService.create).toBeCalledTimes(0);
+      expect(MockConfigService.get).toBeCalledTimes(0);
+    });
+
+    it('should throw error if password not match', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.UNAUTHORIZED,
+        errors: ['Invalid email or password'],
+        data: null,
+      });
+
+      MockAuthRepository.findOne.mockResolvedValue(mockAuth);
+      MockTokenService.isValidPassword.mockResolvedValue(false);
+
+      const credentials = await service.login(mockLoginDto);
+
+      expect(credentials).toStrictEqual(want);
+      expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
+      expect(MockAuthRepository.findOne).toBeCalledTimes(1);
+      expect(MockTokenService.isValidPassword).toBeCalledWith(
+        mockLoginDto.password,
+        mockAuth.password,
+      );
+      expect(MockTokenService.isValidPassword).toBeCalledTimes(1);
+      expect(MockJwtService.generate).toBeCalledTimes(0);
+      expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
+      expect(MockTokenService.create).toBeCalledTimes(0);
+      expect(MockConfigService.get).toBeCalledTimes(0);
     });
   });
 });
