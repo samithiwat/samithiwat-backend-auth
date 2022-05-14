@@ -15,6 +15,7 @@ import { CredentialDto } from '../dto/credential.dto';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ResponseDto } from '../dto/response.dto';
+import { UpdateTokenDto } from '../dto/update-token.dto';
 import { Auth } from '../entities/auth.entity';
 import { Token } from '../entities/token.entity';
 import { AuthService } from './auth.service';
@@ -138,7 +139,7 @@ describe('AuthService', () => {
       id: 1,
       email: faker.internet.email(),
       password: bcrypt.hashSync(faker.internet.password(), 10),
-      isEmailVerified: false,
+      isEmailVerified: true,
       userId: 1,
     });
 
@@ -182,12 +183,8 @@ describe('AuthService', () => {
 
       expect(user).toStrictEqual(want);
       expect(MockUserService.create).toBeCalledWith(userDto);
-      expect(MockUserService.create).toBeCalledTimes(1);
       expect(MockAuthRepository.save).toBeCalledWith(mockRegisterDto);
-      expect(MockAuthRepository.save).toBeCalledTimes(1);
-      expect(MockUserService.create).toBeCalledTimes(1);
       expect(service.hashPassword).toBeCalledWith(mockRegisterDto.password);
-      expect(service.hashPassword).toBeCalledTimes(1);
     });
 
     it('should throw error if email is already existed', async () => {
@@ -212,9 +209,54 @@ describe('AuthService', () => {
       expect(user).toStrictEqual(want);
       expect(MockUserService.create).toBeCalledTimes(0);
       expect(service.hashPassword).toBeCalledWith(mockRegisterDto.password);
-      expect(service.hashPassword).toBeCalledTimes(1);
-      expect(MockAuthRepository.save).toBeCalledTimes(1);
       expect(MockAuthRepository.save).toBeCalledWith(mockRegisterDto);
+    });
+  });
+
+  describe('storeToken', () => {
+    it('should call update method and return token response if existed', async () => {
+      const tokenRes = new ResponseDto({
+        statusCode: HttpStatus.OK,
+        errors: null,
+        data: mockToken,
+      });
+      const want = mockToken;
+
+      mockAuth.tokens = [mockToken];
+
+      MockTokenService.update.mockResolvedValue(tokenRes);
+
+      const res = await service.storeToken(mockAuth, mockToken);
+
+      expect(res).toStrictEqual(want);
+      expect(MockTokenService.update).toBeCalledWith(mockToken.id, mockToken as UpdateTokenDto);
+      expect(MockTokenService.create).toBeCalledTimes(0);
+    });
+
+    it('should call create method and return token response if does not exist', async () => {
+      const tokenRes = new ResponseDto({
+        statusCode: HttpStatus.CREATED,
+        errors: null,
+        data: mockToken,
+      });
+      const want = mockToken;
+
+      const mockTokenDto = new CreateTokenDto({});
+      Object.assign(mockTokenDto, mockToken);
+
+      const mockAnotherToken = new Token({});
+      Object.assign(mockAnotherToken, mockToken);
+      mockAnotherToken.serviceType = ServiceType.GOOGLE;
+
+      mockAuth.tokens = [mockAnotherToken];
+
+      MockTokenService.create.mockResolvedValue(tokenRes);
+
+      const res = await service.storeToken(mockAuth, mockToken);
+
+      expect(res).toStrictEqual(want);
+      expect(MockTokenService.update).toBeCalledTimes(0);
+      expect(MockTokenService.create).toBeCalledWith(mockTokenDto);
     });
   });
 
@@ -224,12 +266,6 @@ describe('AuthService', () => {
         serviceType: ServiceType.APP,
         accessToken: mockCredentialDto.accessToken,
         refreshToken: mockCredentialDto.refreshToken,
-      });
-
-      const tokenRes = new ResponseDto({
-        statusCode: HttpStatus.CREATED,
-        errors: null,
-        data: mockToken,
       });
 
       const want = new ResponseDto({
@@ -242,7 +278,7 @@ describe('AuthService', () => {
       jest.spyOn(service, 'isValidPassword').mockResolvedValue(true);
       MockJwtService.generate.mockResolvedValue(mockCredentialDto.accessToken);
       MockRefreshTokenService.generate.mockResolvedValue(mockCredentialDto.refreshToken);
-      MockTokenService.create.mockResolvedValue(tokenRes);
+      jest.spyOn(service, 'storeToken').mockResolvedValue(mockToken);
       MockConfigService.get.mockReturnValue('3600s');
 
       const credentials = await service.login(mockLoginDto);
@@ -250,15 +286,31 @@ describe('AuthService', () => {
       expect(credentials).toStrictEqual(want);
       expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
       expect(service.isValidPassword).toBeCalledWith(mockLoginDto.password, mockAuth.password);
-      expect(service.isValidPassword).toBeCalledTimes(1);
-      expect(MockAuthRepository.findOne).toBeCalledTimes(1);
-      expect(MockJwtService.generate).toBeCalledTimes(1);
       expect(MockJwtService.generate).toBeCalledWith(mockAuth);
-      expect(MockRefreshTokenService.generate).toBeCalledTimes(1);
-      expect(MockTokenService.create).toBeCalledWith(mockTokenDto);
-      expect(MockTokenService.create).toBeCalledTimes(1);
+      expect(service.storeToken).toBeCalledWith(mockAuth, mockTokenDto);
       expect(MockConfigService.get).toBeCalledWith('jwt.tokenDuration');
-      expect(MockConfigService.get).toBeCalledTimes(1);
+    });
+
+    it('should throw error if not verify email', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.UNAUTHORIZED,
+        errors: ['Email is not verified'],
+        data: null,
+      });
+
+      mockAuth.isEmailVerified = false;
+      MockAuthRepository.findOne.mockResolvedValue(mockAuth);
+      jest.spyOn(service, 'isValidPassword').mockResolvedValue(true);
+
+      const res = await service.login(mockLoginDto);
+
+      expect(res).toStrictEqual(want);
+      expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
+      expect(service.isValidPassword).toBeCalledWith(mockLoginDto.password, mockAuth.password);
+      expect(MockJwtService.generate).toBeCalledTimes(0);
+      expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
+      expect(MockTokenService.create).toBeCalledTimes(0);
+      expect(MockConfigService.get).toBeCalledTimes(0);
     });
 
     it('should throw error if not found email', async () => {
@@ -277,7 +329,6 @@ describe('AuthService', () => {
 
       expect(credentials).toStrictEqual(want);
       expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
-      expect(MockAuthRepository.findOne).toBeCalledTimes(1);
       expect(service.isValidPassword).toBeCalledTimes(0);
       expect(MockJwtService.generate).toBeCalledTimes(0);
       expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
@@ -299,9 +350,7 @@ describe('AuthService', () => {
 
       expect(credentials).toStrictEqual(want);
       expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
-      expect(MockAuthRepository.findOne).toBeCalledTimes(1);
       expect(service.isValidPassword).toBeCalledWith(mockLoginDto.password, mockAuth.password);
-      expect(service.isValidPassword).toBeCalledTimes(1);
       expect(MockJwtService.generate).toBeCalledTimes(0);
       expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
       expect(MockTokenService.create).toBeCalledTimes(0);
@@ -325,7 +374,6 @@ describe('AuthService', () => {
       const res = await service.logout(mockCredentialDto.accessToken);
       expect(res).toStrictEqual(want);
       expect(service.validateToken).toBeCalledWith(mockCredentialDto.accessToken);
-      expect(service.validateToken).toBeCalledTimes(1);
       expect(MockTokenService.remove).toBeCalledWith(1);
       expect(MockTokenService.remove).toBeCalledTimes(1);
     });
@@ -342,7 +390,6 @@ describe('AuthService', () => {
       const res = await service.logout(mockCredentialDto.accessToken);
       expect(res).toStrictEqual(want);
       expect(service.validateToken).toBeCalledWith(mockCredentialDto.accessToken);
-      expect(service.validateToken).toBeCalledTimes(1);
       expect(MockTokenService.remove).toBeCalledTimes(0);
     });
   });
@@ -371,16 +418,12 @@ describe('AuthService', () => {
       const res = await service.changePassword(mockChangePasswordDto);
       expect(res).toStrictEqual(want);
       expect(MockAuthRepository.findOne).toBeCalledWith({ userId: mockChangePasswordDto.userId });
-      expect(MockAuthRepository.findOne).toBeCalledTimes(1);
       expect(service.isValidPassword).toBeCalledWith(
         mockChangePasswordDto.oldPassword,
         mockAuth.password,
       );
-      expect(service.isValidPassword).toBeCalledTimes(1);
       expect(service.hashPassword).toBeCalledWith(mockChangePasswordDto.newPassword);
-      expect(service.hashPassword).toBeCalledTimes(1);
       expect(MockAuthRepository.save).toBeCalledWith(mockAuth);
-      expect(MockAuthRepository.save).toBeCalledTimes(1);
     });
 
     it('should throw error if userId not match', async () => {
@@ -397,7 +440,6 @@ describe('AuthService', () => {
       const res = await service.changePassword(mockChangePasswordDto);
       expect(res).toStrictEqual(want);
       expect(MockAuthRepository.findOne).toBeCalledWith({ userId: mockChangePasswordDto.userId });
-      expect(MockAuthRepository.findOne).toBeCalledTimes(1);
       expect(service.isValidPassword).toBeCalledTimes(0);
       expect(service.hashPassword).toBeCalledTimes(0);
       expect(MockAuthRepository.save).toBeCalledTimes(0);
@@ -417,18 +459,16 @@ describe('AuthService', () => {
       const res = await service.changePassword(mockChangePasswordDto);
       expect(res).toStrictEqual(want);
       expect(MockAuthRepository.findOne).toBeCalledWith({ userId: mockChangePasswordDto.userId });
-      expect(MockAuthRepository.findOne).toBeCalledTimes(1);
       expect(service.isValidPassword).toBeCalledWith(
         mockChangePasswordDto.oldPassword,
         mockAuth.password,
       );
-      expect(service.isValidPassword).toBeCalledTimes(1);
       expect(service.hashPassword).toBeCalledTimes(0);
       expect(MockAuthRepository.save).toBeCalledTimes(0);
     });
   });
 
-  describe('validate', () => {
+  describe('validateToken', () => {
     it('should return auth if success', async () => {
       const mockTokenPayload: TokenPayload = {
         iat: new Date().getTime(),
@@ -436,22 +476,61 @@ describe('AuthService', () => {
         id: mockAuth.userId,
       };
 
+      const want = mockAuth;
+
+      MockJwtService.decode.mockResolvedValue(mockTokenPayload);
+      MockJwtService.findFromPayload.mockResolvedValue(mockAuth);
+
+      const res = await service.validateToken(mockCredentialDto.accessToken);
+      expect(res).toStrictEqual(want);
+      expect(MockJwtService.decode).toBeCalledWith(mockCredentialDto.accessToken);
+      expect(MockJwtService.findFromPayload).toBeCalledWith(mockTokenPayload);
+    });
+
+    it('should return null if invalid token (cannot decode)', async () => {
+      const want = null;
+
+      MockJwtService.decode.mockResolvedValue(undefined);
+
+      const res = await service.validateToken(mockCredentialDto.accessToken);
+      expect(res).toStrictEqual(want);
+      expect(MockJwtService.decode).toBeCalledWith(mockCredentialDto.accessToken);
+      expect(MockJwtService.findFromPayload).toBeCalledTimes(0);
+    });
+
+    it('should return undefined if invalid token (cannot find from database)', async () => {
+      const mockTokenPayload: TokenPayload = {
+        iat: new Date().getTime(),
+        exp: new Date().getTime() + 3600,
+        id: mockAuth.userId,
+      };
+
+      const want = undefined;
+
+      MockJwtService.decode.mockResolvedValue(mockTokenPayload);
+      MockJwtService.findFromPayload.mockResolvedValue(undefined);
+
+      const res = await service.validateToken(mockCredentialDto.accessToken);
+      expect(res).toStrictEqual(want);
+      expect(MockJwtService.decode).toBeCalledWith(mockCredentialDto.accessToken);
+      expect(MockJwtService.findFromPayload).toBeCalledWith(mockTokenPayload);
+    });
+  });
+
+  describe('validate', () => {
+    it('should return auth if success', async () => {
       const want = new ResponseDto({
         statusCode: HttpStatus.OK,
         errors: null,
         data: 1,
       });
 
-      MockJwtService.decode.mockResolvedValue(mockTokenPayload);
-      MockJwtService.findFromPayload.mockResolvedValue(mockAuth);
+      jest.spyOn(service, 'validateToken').mockResolvedValue(mockAuth);
 
       const res = await service.validate(mockCredentialDto.accessToken);
 
       expect(res).toStrictEqual(want);
-      expect(MockJwtService.decode).toBeCalledTimes(1);
-      expect(MockJwtService.decode).toBeCalledWith(mockCredentialDto.accessToken);
-      expect(MockJwtService.findFromPayload).toBeCalledTimes(1);
-      expect(MockJwtService.findFromPayload).toBeCalledWith(mockTokenPayload);
+      expect(service.validateToken).toBeCalledWith(mockCredentialDto.accessToken);
     });
 
     it('should throw error if invalid token', async () => {
@@ -461,14 +540,12 @@ describe('AuthService', () => {
         data: null,
       });
 
-      MockJwtService.decode.mockResolvedValue(undefined);
+      jest.spyOn(service, 'validateToken').mockResolvedValue(null);
 
       const res = await service.validate(mockCredentialDto.accessToken);
 
       expect(res).toStrictEqual(want);
-      expect(MockJwtService.decode).toBeCalledTimes(1);
-      expect(MockJwtService.decode).toBeCalledWith(mockCredentialDto.accessToken);
-      expect(MockJwtService.findFromPayload).toBeCalledTimes(0);
+      expect(service.validateToken).toBeCalledWith(mockCredentialDto.accessToken);
     });
   });
 
@@ -497,18 +574,11 @@ describe('AuthService', () => {
       const res = await service.refreshToken(mockCredentialDto.refreshToken);
       expect(res).toStrictEqual(want);
       expect(MockTokenService.decode).toBeCalledWith(mockCredentialDto.refreshToken);
-      expect(MockTokenService.decode).toBeCalledTimes(1);
       expect(MockRefreshTokenService.verify).toBeCalledWith(mockCredentialDto.refreshToken);
-      expect(MockRefreshTokenService.verify).toBeCalledTimes(1);
       expect(MockRefreshTokenService.generate).toBeCalledWith();
-      expect(MockRefreshTokenService.generate).toBeCalledTimes(1);
       expect(MockJwtService.generate).toBeCalledWith(mockToken.auth);
-      expect(MockJwtService.generate).toBeCalledTimes(1);
       expect(MockTokenService.update).toBeCalledWith(1, mockToken);
-      expect(MockTokenService.update).toBeCalledTimes(1);
       expect(MockTokenService.encode).toBeCalledWith(mockCredentialDto.refreshToken);
-      expect(MockTokenService.encode).toBeCalledTimes(1);
-      expect(MockConfigService.get).toBeCalledTimes(1);
     });
 
     it('should throw error if invalid refresh token (cannot decode)', async () => {
@@ -523,7 +593,6 @@ describe('AuthService', () => {
       const res = await service.refreshToken(mockCredentialDto.refreshToken);
       expect(res).toStrictEqual(want);
       expect(MockTokenService.decode).toBeCalledWith(mockCredentialDto.refreshToken);
-      expect(MockTokenService.decode).toBeCalledTimes(1);
       expect(MockRefreshTokenService.verify).toBeCalledTimes(0);
       expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
       expect(MockJwtService.generate).toBeCalledTimes(0);
@@ -545,7 +614,6 @@ describe('AuthService', () => {
       const res = await service.refreshToken(mockCredentialDto.refreshToken);
       expect(res).toStrictEqual(want);
       expect(MockTokenService.decode).toBeCalledWith(mockCredentialDto.refreshToken);
-      expect(MockTokenService.decode).toBeCalledTimes(1);
       expect(MockRefreshTokenService.verify).toBeCalledWith(mockCredentialDto.refreshToken);
       expect(MockRefreshTokenService.verify).toBeCalledTimes(1);
       expect(MockRefreshTokenService.generate).toBeCalledTimes(0);

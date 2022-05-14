@@ -13,6 +13,7 @@ import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ResponseDto } from '../dto/response.dto';
 import { Auth } from '../entities/auth.entity';
+import { Token } from '../entities/token.entity';
 import {
   ChangePasswordResponse,
   LoginResponse,
@@ -73,7 +74,10 @@ export class AuthService {
       data: null,
     }) as LoginResponse;
 
-    const auth = await this.authRepository.findOne({ email: loginDto.email });
+    const auth = await this.authRepository.findOne(
+      { email: loginDto.email },
+      { relations: ['tokens'] },
+    );
     if (!auth) {
       res.statusCode = HttpStatus.UNAUTHORIZED;
       res.errors = ['Invalid email or password'];
@@ -87,19 +91,26 @@ export class AuthService {
       return res;
     }
 
+    if (!auth.isEmailVerified) {
+      res.statusCode = HttpStatus.UNAUTHORIZED;
+      res.errors = ['Email is not verified'];
+      return res;
+    }
+
     const accessToken = await this.jwtService.generate(auth);
     const refreshToken = await this.refreshTokenService.generate();
-    const credentials = await this.tokenService.create(
-      new CreateTokenDto({
-        serviceType: ServiceType.APP,
-        accessToken,
-        refreshToken,
-      }),
-    );
+
+    const tokenDto = new CreateTokenDto({
+      serviceType: ServiceType.APP,
+      accessToken,
+      refreshToken,
+    });
+
+    const credentials = await this.storeToken(auth, tokenDto);
 
     res.data = new CredentialDto({
-      accessToken: credentials.data.accessToken,
-      refreshToken: credentials.data.refreshToken,
+      accessToken: credentials.accessToken,
+      refreshToken: credentials.refreshToken,
       expiresIn: parseInt(this.configService.get<string>('jwt.tokenDuration')),
     });
 
@@ -237,5 +248,17 @@ export class AuthService {
     }
 
     return await this.jwtService.findFromPayload(decoded);
+  }
+
+  async storeToken(auth: Auth, newToken: CreateTokenDto): Promise<Token> {
+    const existedToken = auth.tokens.find(token => token.serviceType === newToken.serviceType);
+
+    if (!existedToken) {
+      const res = await this.tokenService.create(newToken);
+      return res.data;
+    }
+
+    const res = await this.tokenService.update(existedToken.id, newToken);
+    return res.data;
   }
 }
