@@ -6,10 +6,14 @@ export interface RegisterResponse extends BaseResponse {
   data: UserDto;
 }
 
-export interface RefreshTokenResponse extends BaseResponse {
+export interface LoginResponse extends BaseResponse {
   data: CredentialDto;
 }
 
-export interface LoginResponse extends BaseResponse {
+export interface ChangePasswordResponse extends BaseResponse {
+  data: boolean;
+}
+
+export interface RefreshTokenResponse extends BaseResponse {
   data: CredentialDto;
 }
