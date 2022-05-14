@@ -1,8 +1,8 @@
-export class CreateAuthDto {
+export class LoginDto {
   email: string;
   password: string;
 
-  constructor(partial: Partial<CreateAuthDto>) {
+  constructor(partial: Partial<LoginDto>) {
     Object.assign(this, partial);
   }
 }
