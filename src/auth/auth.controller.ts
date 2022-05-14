@@ -35,7 +35,7 @@ export class AuthController {
     return this.authService.logout(req.token);
   }
 
-  @GrpcMethod('AuthService', 'Validate')
+  @GrpcMethod('AuthService', 'ChangePassword')
   async changePassword(req: ChangePasswordRequest): Promise<ChangePasswordResponse> {
     return this.authService.changePassword(req.changePassword);
   }
