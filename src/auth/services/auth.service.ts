@@ -16,7 +16,9 @@ import { Auth } from '../entities/auth.entity';
 import {
   ChangePasswordResponse,
   LoginResponse,
+  RefreshTokenResponse,
   RegisterResponse,
+  ValidateResponse,
 } from '../interface/auth.interface';
 import { JwtService } from './jwt.service';
 import { RefreshTokenService } from './refresh-token.service';
@@ -134,12 +136,42 @@ export class AuthService {
     return res;
   }
 
-  validate(id: number) {
-    return `This action removes a #${id} auth`;
+  async validate(token: string): Promise<ValidateResponse> {
+    const res = new ResponseDto({
+      statusCode: HttpStatus.OK,
+      errors: null,
+      data: null,
+    });
+
+    const decoded = await this.jwtService.decode(token);
+
+    if (!decoded) {
+      res.statusCode = HttpStatus.UNAUTHORIZED;
+      res.errors = ['Invalid token'];
+      return res;
+    }
+
+    const auth = await this.jwtService.findFromPayload(decoded);
+
+    if (!auth) {
+      res.statusCode = HttpStatus.UNAUTHORIZED;
+      res.errors = ['Invalid token'];
+      return res;
+    }
+
+    res.data = auth.userId;
+
+    return res;
   }
 
-  refreshToken(refreshToken: string) {
-    return `this action refreshes a #${refreshToken} auth`;
+  async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
+    const res = new ResponseDto({
+      statusCode: HttpStatus.OK,
+      errors: null,
+      data: null,
+    });
+
+    return res;
   }
 
   async hashPassword(password: string): Promise<string> {

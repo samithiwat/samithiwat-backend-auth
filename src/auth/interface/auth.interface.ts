@@ -14,6 +14,10 @@ export interface ChangePasswordResponse extends BaseResponse {
   data: boolean;
 }
 
+export interface ValidateResponse extends BaseResponse {
+  data: number;
+}
+
 export interface RefreshTokenResponse extends BaseResponse {
   data: CredentialDto;
 }

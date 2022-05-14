@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { UserService } from 'src/user/user.service';
 import { UserDto } from '../../user/user.interface';
 import { ChangePasswordDto } from '../dto/change-password.dto';
+import { CredentialDto } from '../dto/credential.dto';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { Auth } from '../entities/auth.entity';
@@ -56,6 +57,7 @@ describe('AuthService', () => {
   let mockLoginDto: LoginDto;
   let mockUser: UserDto;
   let mockChangePasswordDto: ChangePasswordDto;
+  let mockCredentialDto: CredentialDto;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -121,6 +123,12 @@ describe('AuthService', () => {
       userId: 1,
       oldPassword: faker.internet.password(),
       newPassword: faker.internet.password(),
+    });
+
+    mockCredentialDto = new CredentialDto({
+      accessToken: faker.lorem.word(),
+      refreshToken: faker.lorem.word(),
+      expiresIn: 3600,
     });
 
     service = module.get<AuthService>(AuthService);
@@ -318,7 +326,7 @@ describe('AuthService', () => {
   //     MockAuthRepository.save.mockResolvedValue(mockAuth);
 
   //     const res = await service.changePassword(mockChangePasswordDto);
-  //     expect(want).toStrictEqual(res);
+  //     expect(res).toStrictEqual(want);
   //     expect(MockAuthRepository.findOne).toBeCalledWith({ userId: mockChangePasswordDto.userId });
   //     expect(MockAuthRepository.findOne).toBeCalledTimes(1);
   //     expect(service.isValidPassword).toBeCalledWith(
@@ -344,7 +352,7 @@ describe('AuthService', () => {
   //     jest.spyOn(service, 'hashPassword');
 
   //     const res = await service.changePassword(mockChangePasswordDto);
-  //     expect(want).toStrictEqual(res);
+  //     expect(res).toStrictEqual(want);
   //     expect(MockAuthRepository.findOne).toBeCalledWith({ userId: mockChangePasswordDto.userId });
   //     expect(MockAuthRepository.findOne).toBeCalledTimes(1);
   //     expect(service.isValidPassword).toBeCalledTimes(0);
@@ -364,7 +372,7 @@ describe('AuthService', () => {
   //     jest.spyOn(service, 'hashPassword');
 
   //     const res = await service.changePassword(mockChangePasswordDto);
-  //     expect(want).toStrictEqual(res);
+  //     expect(res).toStrictEqual(want);
   //     expect(MockAuthRepository.findOne).toBeCalledWith({ userId: mockChangePasswordDto.userId });
   //     expect(MockAuthRepository.findOne).toBeCalledTimes(1);
   //     expect(service.isValidPassword).toBeCalledWith(
@@ -374,6 +382,50 @@ describe('AuthService', () => {
   //     expect(service.isValidPassword).toBeCalledTimes(1);
   //     expect(service.hashPassword).toBeCalledTimes(0);
   //     expect(MockAuthRepository.save).toBeCalledTimes(0);
+  //   });
+  // });
+
+  // describe('validate', () => {
+  //   it('should return userId if success', async () => {
+  //     const mockTokenPayload: TokenPayload = {
+  //       iat: new Date().getTime(),
+  //       exp: new Date().getTime() + 3600,
+  //       id: mockAuth.userId,
+  //     };
+
+  //     const want = new ResponseDto({
+  //       statusCode: HttpStatus.OK,
+  //       errors: null,
+  //       data: mockAuth.userId,
+  //     });
+
+  //     MockJwtService.decode.mockResolvedValue(mockTokenPayload);
+  //     MockJwtService.findFromPayload.mockResolvedValue(mockAuth);
+
+  //     const res = await service.validate(mockCredentialDto.accessToken);
+
+  //     expect(res).toStrictEqual(want);
+  //     expect(MockJwtService.decode).toBeCalledTimes(1);
+  //     expect(MockJwtService.decode).toBeCalledWith(mockCredentialDto.accessToken);
+  //     expect(MockJwtService.findFromPayload).toBeCalledTimes(1);
+  //     expect(MockJwtService.findFromPayload).toBeCalledWith(mockTokenPayload);
+  //   });
+
+  //   it('should throw error if invalid token', async () => {
+  //     const want = new ResponseDto({
+  //       statusCode: HttpStatus.UNAUTHORIZED,
+  //       errors: ['Invalid token'],
+  //       data: null,
+  //     });
+
+  //     MockJwtService.decode.mockResolvedValue(undefined);
+
+  //     const res = await service.validate(mockCredentialDto.accessToken);
+
+  //     expect(res).toStrictEqual(want);
+  //     expect(MockJwtService.decode).toBeCalledTimes(1);
+  //     expect(MockJwtService.decode).toBeCalledWith(mockCredentialDto.accessToken);
+  //     expect(MockJwtService.findFromPayload).toBeCalledTimes(0);
   //   });
   // });
 });
