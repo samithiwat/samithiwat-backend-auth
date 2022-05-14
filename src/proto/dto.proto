@@ -106,3 +106,9 @@ message Login{
   string username = 1;
   string password = 2;
 }
+
+message ChangePassword{
+  uint32 userId = 1;
+  string oldPassword = 2;
+  string newPassword = 3;
+}
