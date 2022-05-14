@@ -107,14 +107,6 @@ describe('AuthService', () => {
       imageUrl: faker.internet.url(),
     });
 
-    mockAuth = new Auth({
-      id: 1,
-      email: faker.internet.email(),
-      password: bcrypt.hashSync(faker.internet.password(), 10),
-      isEmailVerified: false,
-      userId: 1,
-    });
-
     mockLoginDto = new LoginDto({
       email: faker.internet.email(),
       password: faker.internet.password(),
@@ -139,7 +131,15 @@ describe('AuthService', () => {
       accessToken: faker.lorem.word(),
       refreshToken: faker.lorem.word(),
       expiresDate: faker.date.soon(),
-      auth: mockAuth,
+      auth: new Auth({ id: 1 }),
+    });
+
+    mockAuth = new Auth({
+      id: 1,
+      email: faker.internet.email(),
+      password: bcrypt.hashSync(faker.internet.password(), 10),
+      isEmailVerified: false,
+      userId: 1,
     });
 
     mockCredentialDto = new CredentialDto({
@@ -309,6 +309,44 @@ describe('AuthService', () => {
     });
   });
 
+  describe('logout', () => {
+    it('should return nothing if success', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.NO_CONTENT,
+        errors: null,
+        data: null,
+      });
+
+      mockAuth.tokens = [mockToken];
+
+      jest.spyOn(service, 'validateToken').mockResolvedValue(mockAuth);
+      MockTokenService.remove.mockResolvedValue(mockToken);
+
+      const res = await service.logout(mockCredentialDto.accessToken);
+      expect(res).toStrictEqual(want);
+      expect(service.validateToken).toBeCalledWith(mockCredentialDto.accessToken);
+      expect(service.validateToken).toBeCalledTimes(1);
+      expect(MockTokenService.remove).toBeCalledWith(1);
+      expect(MockTokenService.remove).toBeCalledTimes(1);
+    });
+
+    it('should throw error if invalid token', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.UNAUTHORIZED,
+        errors: ['Invalid token'],
+        data: null,
+      });
+
+      jest.spyOn(service, 'validateToken').mockResolvedValue(null);
+
+      const res = await service.logout(mockCredentialDto.accessToken);
+      expect(res).toStrictEqual(want);
+      expect(service.validateToken).toBeCalledWith(mockCredentialDto.accessToken);
+      expect(service.validateToken).toBeCalledTimes(1);
+      expect(MockTokenService.remove).toBeCalledTimes(0);
+    });
+  });
+
   describe('changePassword', () => {
     it('should return true if success', async () => {
       const want = new ResponseDto({
@@ -391,7 +429,7 @@ describe('AuthService', () => {
   });
 
   describe('validate', () => {
-    it('should return userId if success', async () => {
+    it('should return auth if success', async () => {
       const mockTokenPayload: TokenPayload = {
         iat: new Date().getTime(),
         exp: new Date().getTime() + 3600,
@@ -401,7 +439,7 @@ describe('AuthService', () => {
       const want = new ResponseDto({
         statusCode: HttpStatus.OK,
         errors: null,
-        data: mockAuth.userId,
+        data: 1,
       });
 
       MockJwtService.decode.mockResolvedValue(mockTokenPayload);
@@ -464,7 +502,7 @@ describe('AuthService', () => {
       expect(MockRefreshTokenService.verify).toBeCalledTimes(1);
       expect(MockRefreshTokenService.generate).toBeCalledWith();
       expect(MockRefreshTokenService.generate).toBeCalledTimes(1);
-      expect(MockJwtService.generate).toBeCalledWith(mockAuth);
+      expect(MockJwtService.generate).toBeCalledWith(mockToken.auth);
       expect(MockJwtService.generate).toBeCalledTimes(1);
       expect(MockTokenService.update).toBeCalledWith(1, mockToken);
       expect(MockTokenService.update).toBeCalledTimes(1);

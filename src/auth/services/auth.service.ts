@@ -16,6 +16,7 @@ import { Auth } from '../entities/auth.entity';
 import {
   ChangePasswordResponse,
   LoginResponse,
+  LogoutResponse,
   RefreshTokenResponse,
   RegisterResponse,
   ValidateResponse,
@@ -105,6 +106,27 @@ export class AuthService {
     return res;
   }
 
+  async logout(token: string): Promise<LogoutResponse> {
+    const res = new ResponseDto({
+      statusCode: HttpStatus.NO_CONTENT,
+      errors: null,
+      data: null,
+    });
+
+    const auth = await this.validateToken(token);
+
+    if (!auth) {
+      res.statusCode = HttpStatus.UNAUTHORIZED;
+      res.errors = ['Invalid token'];
+      return res;
+    }
+
+    const appToken = auth.tokens.find(token => token.serviceType === ServiceType.APP);
+    await this.tokenService.remove(appToken.id);
+
+    return res;
+  }
+
   async changePassword(changePasswordDto: ChangePasswordDto): Promise<ChangePasswordResponse> {
     const res = new ResponseDto({
       statusCode: HttpStatus.OK,
@@ -143,15 +165,7 @@ export class AuthService {
       data: null,
     });
 
-    const decoded = await this.jwtService.decode(token);
-
-    if (!decoded) {
-      res.statusCode = HttpStatus.UNAUTHORIZED;
-      res.errors = ['Invalid token'];
-      return res;
-    }
-
-    const auth = await this.jwtService.findFromPayload(decoded);
+    const auth = await this.validateToken(token);
 
     if (!auth) {
       res.statusCode = HttpStatus.UNAUTHORIZED;
@@ -213,5 +227,15 @@ export class AuthService {
 
   async isValidPassword(password: string, hashedPassword: string): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
+  }
+
+  async validateToken(token: string): Promise<Auth> {
+    const decoded = await this.jwtService.decode(token);
+
+    if (!decoded) {
+      return null;
+    }
+
+    return await this.jwtService.findFromPayload(decoded);
   }
 }
