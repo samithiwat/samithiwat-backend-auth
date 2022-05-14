@@ -107,6 +107,8 @@ message Login{
   string password = 2;
 }
 
-message TokenPayload{
+message ChangePassword{
   uint32 userId = 1;
+  string oldPassword = 2;
+  string newPassword = 3;
 }

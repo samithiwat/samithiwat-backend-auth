@@ -10,6 +10,9 @@ export default () => ({
     port: parseInt(process.env.PORT) || 3001,
     origin: true,
   },
+  user: {
+    host: process.env.USER_SERVICE_HOST || 'localhost',
+  },
   jwt: {
     secret: process.env.JWT_SECRET,
     tokenDuration: process.env.TOKEN_DURATION || '3600s',
