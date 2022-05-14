@@ -1,15 +1,19 @@
 import faker from '@faker-js/faker';
+import { HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { ServiceType } from 'src/common/enum/auth.enum';
 import { UserService } from 'src/user/user.service';
 import { UserDto } from '../../user/user.interface';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { CredentialDto } from '../dto/credential.dto';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
+import { ResponseDto } from '../dto/response.dto';
 import { Auth } from '../entities/auth.entity';
+import { Token } from '../entities/token.entity';
 import { AuthService } from './auth.service';
 import { JwtService } from './jwt.service';
 import { RefreshTokenService } from './refresh-token.service';
@@ -54,6 +58,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let mockRegisterDto: RegisterDto;
   let mockAuth: Auth;
+  let mockToken: Token;
   let mockLoginDto: LoginDto;
   let mockUser: UserDto;
   let mockChangePasswordDto: ChangePasswordDto;
@@ -123,6 +128,15 @@ describe('AuthService', () => {
       userId: 1,
       oldPassword: faker.internet.password(),
       newPassword: faker.internet.password(),
+    });
+
+    mockToken = new Token({
+      id: 1,
+      serviceType: ServiceType.APP,
+      accessToken: faker.lorem.word(),
+      refreshToken: faker.lorem.word(),
+      expiresDate: faker.date.soon(),
+      auth: mockAuth,
     });
 
     mockCredentialDto = new CredentialDto({
@@ -428,4 +442,88 @@ describe('AuthService', () => {
   //     expect(MockJwtService.findFromPayload).toBeCalledTimes(0);
   //   });
   // });
+
+  describe('refresh', () => {
+    it('should return credential if success', async () => {
+      const mockTokenRes = new ResponseDto({
+        statusCode: HttpStatus.OK,
+        errors: null,
+        data: mockToken,
+      });
+
+      const want = new ResponseDto({
+        statusCode: HttpStatus.OK,
+        errors: null,
+        data: mockCredentialDto,
+      });
+
+      MockTokenService.decode.mockResolvedValue(mockCredentialDto.refreshToken);
+      MockRefreshTokenService.verify.mockResolvedValue(mockToken);
+      MockRefreshTokenService.generate.mockResolvedValue(mockCredentialDto.refreshToken);
+      MockJwtService.generate.mockResolvedValue(mockCredentialDto.accessToken);
+      MockTokenService.update.mockResolvedValue(mockTokenRes);
+      MockTokenService.encode.mockResolvedValue(mockCredentialDto.refreshToken);
+      MockConfigService.get.mockReturnValue('3600s');
+
+      const res = await service.refreshToken(mockCredentialDto.refreshToken);
+      expect(res).toStrictEqual(want);
+      expect(MockTokenService.decode).toBeCalledWith(mockCredentialDto.refreshToken);
+      expect(MockTokenService.decode).toBeCalledTimes(1);
+      expect(MockRefreshTokenService.verify).toBeCalledWith(mockCredentialDto.refreshToken);
+      expect(MockRefreshTokenService.verify).toBeCalledTimes(1);
+      expect(MockRefreshTokenService.generate).toBeCalledWith();
+      expect(MockRefreshTokenService.generate).toBeCalledTimes(1);
+      expect(MockJwtService.generate).toBeCalledWith(mockAuth);
+      expect(MockJwtService.generate).toBeCalledTimes(1);
+      expect(MockTokenService.update).toBeCalledWith(1, mockToken);
+      expect(MockTokenService.update).toBeCalledTimes(1);
+      expect(MockTokenService.encode).toBeCalledWith(mockCredentialDto.refreshToken);
+      expect(MockTokenService.encode).toBeCalledTimes(1);
+      expect(MockConfigService.get).toBeCalledTimes(1);
+    });
+
+    it('should throw error if invalid refresh token (cannot decode)', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.UNAUTHORIZED,
+        errors: ['Invalid refresh token'],
+        data: null,
+      });
+
+      MockTokenService.decode.mockRejectedValue(new Error('Cannot decrypt'));
+
+      const res = await service.refreshToken(mockCredentialDto.refreshToken);
+      expect(res).toStrictEqual(want);
+      expect(MockTokenService.decode).toBeCalledWith(mockCredentialDto.refreshToken);
+      expect(MockTokenService.decode).toBeCalledTimes(1);
+      expect(MockRefreshTokenService.verify).toBeCalledTimes(0);
+      expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
+      expect(MockJwtService.generate).toBeCalledTimes(0);
+      expect(MockTokenService.update).toBeCalledTimes(0);
+      expect(MockTokenService.encode).toBeCalledTimes(0);
+      expect(MockConfigService.get).toBeCalledTimes(0);
+    });
+
+    it('should throw error if invalid refresh token (cannot find from database)', async () => {
+      const want = new ResponseDto({
+        statusCode: HttpStatus.UNAUTHORIZED,
+        errors: ['Invalid refresh token'],
+        data: null,
+      });
+
+      MockTokenService.decode.mockResolvedValue(mockCredentialDto.refreshToken);
+      MockRefreshTokenService.verify.mockResolvedValue(null);
+
+      const res = await service.refreshToken(mockCredentialDto.refreshToken);
+      expect(res).toStrictEqual(want);
+      expect(MockTokenService.decode).toBeCalledWith(mockCredentialDto.refreshToken);
+      expect(MockTokenService.decode).toBeCalledTimes(1);
+      expect(MockRefreshTokenService.verify).toBeCalledWith(mockCredentialDto.refreshToken);
+      expect(MockRefreshTokenService.verify).toBeCalledTimes(1);
+      expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
+      expect(MockJwtService.generate).toBeCalledTimes(0);
+      expect(MockTokenService.update).toBeCalledTimes(0);
+      expect(MockTokenService.encode).toBeCalledTimes(0);
+      expect(MockConfigService.get).toBeCalledTimes(0);
+    });
+  });
 });

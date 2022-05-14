@@ -171,6 +171,38 @@ export class AuthService {
       data: null,
     });
 
+    let decoded: string;
+
+    try {
+      decoded = await this.tokenService.decode(refreshToken);
+    } catch (err) {
+      res.statusCode = HttpStatus.UNAUTHORIZED;
+      res.errors = ['Invalid refresh token'];
+      return res;
+    }
+
+    const token = await this.refreshTokenService.verify(decoded);
+
+    if (!token) {
+      res.statusCode = HttpStatus.UNAUTHORIZED;
+      res.errors = ['Invalid refresh token'];
+      return res;
+    }
+
+    token.accessToken = await this.jwtService.generate(token.auth);
+    token.refreshToken = await this.refreshTokenService.generate();
+
+    const updatedTokenRes = await this.tokenService.update(token.id, token);
+    const updatedToken = updatedTokenRes.data;
+
+    updatedToken.refreshToken = await this.tokenService.encode(updatedToken.refreshToken);
+
+    res.data = new CredentialDto({
+      accessToken: updatedToken.accessToken,
+      refreshToken: updatedToken.refreshToken,
+      expiresIn: parseInt(this.configService.get<string>('jwt.tokenDuration')),
+    });
+
     return res;
   }
 
