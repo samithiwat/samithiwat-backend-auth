@@ -32,8 +32,6 @@ const MockTokenService = {
   remove: jest.fn(),
   encode: jest.fn(),
   decode: jest.fn(),
-  hashPassword: jest.fn(),
-  isValidPassword: jest.fn(),
 };
 
 const MockUserService = {
@@ -60,8 +58,8 @@ const MockConfigService = {
 describe('AuthService', () => {
   let service: AuthService;
   let mockRegisterDto: RegisterDto;
-  let mockLoginDto: LoginDto;
   let mockAuth: Auth;
+  let mockLoginDto: LoginDto;
   let mockUser: UserDto;
 
   beforeEach(async () => {
@@ -95,11 +93,6 @@ describe('AuthService', () => {
       ],
     }).compile();
 
-    mockLoginDto = new LoginDto({
-      email: faker.internet.email(),
-      password: faker.internet.password(),
-    });
-
     mockRegisterDto = new RegisterDto({
       email: faker.internet.email(),
       password: faker.internet.password(),
@@ -115,6 +108,11 @@ describe('AuthService', () => {
       password: bcrypt.hashSync(faker.internet.password(), 10),
       isEmailVerified: false,
       userId: 1,
+    });
+
+    mockLoginDto = new LoginDto({
+      email: faker.internet.email(),
+      password: faker.internet.password(),
     });
 
     mockUser = {
@@ -152,7 +150,7 @@ describe('AuthService', () => {
 
       MockUserService.create.mockResolvedValue(want);
       MockAuthRepository.save.mockResolvedValue(mockAuth);
-      MockTokenService.hashPassword.mockResolvedValue(mockRegisterDto.password);
+      jest.spyOn(service, 'hashPassword').mockResolvedValue(mockRegisterDto.password);
 
       const user = await service.register(mockRegisterDto);
 
@@ -162,8 +160,8 @@ describe('AuthService', () => {
       expect(MockAuthRepository.save).toBeCalledWith(mockRegisterDto);
       expect(MockAuthRepository.save).toBeCalledTimes(1);
       expect(MockUserService.create).toBeCalledTimes(1);
-      expect(MockTokenService.hashPassword).toBeCalledWith(mockRegisterDto.password);
-      expect(MockTokenService.hashPassword).toBeCalledTimes(1);
+      expect(service.hashPassword).toBeCalledWith(mockRegisterDto.password);
+      expect(service.hashPassword).toBeCalledTimes(1);
     });
 
     it('should throw error if email is already existed', async () => {
@@ -181,14 +179,14 @@ describe('AuthService', () => {
 
       MockUserService.create.mockResolvedValue(userRes);
       MockAuthRepository.save.mockRejectedValue(new Error('Duplicated Email'));
-      MockTokenService.hashPassword.mockResolvedValue(mockRegisterDto.password);
+      jest.spyOn(service, 'hashPassword').mockResolvedValue(mockRegisterDto.password);
 
       const user = await service.register(mockRegisterDto);
 
       expect(user).toStrictEqual(want);
       expect(MockUserService.create).toBeCalledTimes(0);
-      expect(MockTokenService.hashPassword).toBeCalledWith(mockRegisterDto.password);
-      expect(MockTokenService.hashPassword).toBeCalledTimes(1);
+      expect(service.hashPassword).toBeCalledWith(mockRegisterDto.password);
+      expect(service.hashPassword).toBeCalledTimes(1);
       expect(MockAuthRepository.save).toBeCalledTimes(1);
       expect(MockAuthRepository.save).toBeCalledWith(mockRegisterDto);
     });
@@ -227,7 +225,7 @@ describe('AuthService', () => {
       });
 
       MockAuthRepository.findOne.mockResolvedValue(mockAuth);
-      MockTokenService.isValidPassword.mockResolvedValue(true);
+      jest.spyOn(service, 'isValidPassword').mockResolvedValue(true);
       MockJwtService.generate.mockResolvedValue(accessToken);
       MockRefreshTokenService.generate.mockResolvedValue(refreshToken);
       MockTokenService.create.mockResolvedValue(tokenRes);
@@ -237,11 +235,8 @@ describe('AuthService', () => {
 
       expect(credentials).toStrictEqual(want);
       expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
-      expect(MockTokenService.isValidPassword).toBeCalledWith(
-        mockLoginDto.password,
-        mockAuth.password,
-      );
-      expect(MockTokenService.isValidPassword).toBeCalledTimes(1);
+      expect(service.isValidPassword).toBeCalledWith(mockLoginDto.password, mockAuth.password);
+      expect(service.isValidPassword).toBeCalledTimes(1);
       expect(MockAuthRepository.findOne).toBeCalledTimes(1);
       expect(MockJwtService.generate).toBeCalledTimes(1);
       expect(MockJwtService.generate).toBeCalledWith(mockAuth);
@@ -262,13 +257,14 @@ describe('AuthService', () => {
       mockAuth.password = bcrypt.hashSync(mockAuth.password, 10);
 
       MockAuthRepository.findOne.mockResolvedValue(undefined);
+      jest.spyOn(service, 'isValidPassword');
 
       const credentials = await service.login(mockLoginDto);
 
       expect(credentials).toStrictEqual(want);
       expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
       expect(MockAuthRepository.findOne).toBeCalledTimes(1);
-      expect(MockTokenService.isValidPassword).toBeCalledTimes(0);
+      expect(service.isValidPassword).toBeCalledTimes(0);
       expect(MockJwtService.generate).toBeCalledTimes(0);
       expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
       expect(MockTokenService.create).toBeCalledTimes(0);
@@ -283,22 +279,34 @@ describe('AuthService', () => {
       });
 
       MockAuthRepository.findOne.mockResolvedValue(mockAuth);
-      MockTokenService.isValidPassword.mockResolvedValue(false);
+      jest.spyOn(service, 'isValidPassword').mockResolvedValue(false);
 
       const credentials = await service.login(mockLoginDto);
 
       expect(credentials).toStrictEqual(want);
       expect(MockAuthRepository.findOne).toBeCalledWith({ email: mockLoginDto.email });
       expect(MockAuthRepository.findOne).toBeCalledTimes(1);
-      expect(MockTokenService.isValidPassword).toBeCalledWith(
-        mockLoginDto.password,
-        mockAuth.password,
-      );
-      expect(MockTokenService.isValidPassword).toBeCalledTimes(1);
+      expect(service.isValidPassword).toBeCalledWith(mockLoginDto.password, mockAuth.password);
+      expect(service.isValidPassword).toBeCalledTimes(1);
       expect(MockJwtService.generate).toBeCalledTimes(0);
       expect(MockRefreshTokenService.generate).toBeCalledTimes(0);
       expect(MockTokenService.create).toBeCalledTimes(0);
       expect(MockConfigService.get).toBeCalledTimes(0);
     });
   });
+
+  // describe('changePassword', () => {
+  // it('should return true if success', async () => {
+  //   const newPassword = faker.lorem.word();
+  //   const want = new ResponseDto({
+  //     statusCode: HttpStatus.OK,
+  //     errors: null,
+  //     data: true,
+  //   });
+  //   MockAuthRepository.findOne.mockResolvedValue(mockAuth);
+  //   MockAuthRepository.save.mockResolvedValue(mockAuth);
+  //   jest.spyOn(service, 'hashPassword').mockResolvedValue(newPassword);
+  //   const res = service.changePassword(1, newPassword);
+  // });
+  // });
 });

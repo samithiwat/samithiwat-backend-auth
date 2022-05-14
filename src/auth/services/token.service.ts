@@ -1,14 +1,13 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto-js';
 import * as moment from 'moment';
 import { ServiceType } from 'src/common/enum/auth.enum';
 import { Repository } from 'typeorm';
 import { CreateTokenDto } from '../dto/create-token.dto';
 import { ResponseDto } from '../dto/response.dto';
-import { UpdateAuthDto } from '../dto/update-auth.dto';
+import { UpdateTokenDto } from '../dto/update-token.dto';
 import { Token } from '../entities/token.entity';
 import { TokenResponse } from '../interface/token.interface';
 import { JwtService } from './jwt.service';
@@ -70,7 +69,7 @@ export class TokenService {
     }) as TokenResponse;
   }
 
-  async update(id: number, updateAuthDto: UpdateAuthDto): Promise<TokenResponse> {
+  async update(id: number, updateTokenDto: UpdateTokenDto): Promise<TokenResponse> {
     const searchResult = await this.findOne(id);
 
     if (searchResult.statusCode !== HttpStatus.OK) {
@@ -78,7 +77,7 @@ export class TokenService {
     }
 
     try {
-      const token = await this.tokenRepository.save({ id, ...updateAuthDto });
+      const token = await this.tokenRepository.save({ id, ...updateTokenDto });
       searchResult.data = token;
     } catch (err) {
       searchResult.statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
@@ -107,14 +106,5 @@ export class TokenService {
     return crypto.AES.decrypt(token, this.configService.get<string>('jwt.secret')).toString(
       crypto.enc.Utf8,
     );
-  }
-
-  async hashPassword(password: string): Promise<string> {
-    const salt: string = await bcrypt.genSalt(10);
-    return bcrypt.hash(password, salt);
-  }
-
-  async isValidPassword(password: string, hashedPassword: string): Promise<boolean> {
-    return bcrypt.compare(password, hashedPassword);
   }
 }
