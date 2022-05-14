@@ -9,6 +9,7 @@ option go_package = "github.com/samithiwat/samithiwat-backend-user/src/proto";
 service AuthService {
   rpc Register(RegisterRequest) returns (RegisterResponse){}
   rpc Login(LoginRequest) returns (LoginResponse){}
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse){}
   rpc Validate(ValidateRequest) returns (ValidateResponse){}
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse){}
 }
@@ -37,6 +38,21 @@ message LoginResponse{
   repeated dto.Credential data = 3;
 }
 
+// Change Password
+
+message ChangePasswordRequest{
+  uint32 userId = 1;
+  string oldPassword = 2;
+  string newPassword = 3;
+}
+
+message ChangePasswordResponse{
+  int32 StatusCode = 1;
+  repeated string errors = 2;
+  bool data = 3;
+}
+
+
 // Validate
 
 message ValidateRequest{
@@ -48,6 +64,8 @@ message ValidateResponse{
   repeated string errors = 2;
   repeated dto.TokenPayload data = 3;
 }
+
+// Redeem Refresh Token
 
 message RefreshTokenRequest{
   string refreshToken = 1;
