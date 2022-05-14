@@ -1,5 +1,6 @@
 import { BaseEntity } from 'src/common/entity/base.entity';
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, OneToMany } from 'typeorm';
+import { Token } from './token.entity';
 
 @Entity()
 export class Auth extends BaseEntity {
@@ -13,10 +14,14 @@ export class Auth extends BaseEntity {
   @Column({ name: 'is_email_verified', default: false })
   isEmailVerified: boolean;
 
+  @Index({ unique: true })
   @Column({ name: 'user_id', nullable: true })
   userId: number;
 
-  constructor(partial: Partial<BaseEntity>) {
+  @OneToMany(() => Token, token => token.auth)
+  tokens: Token[];
+
+  constructor(partial: Partial<Auth>) {
     super(partial);
     Object.assign(this, partial);
   }
