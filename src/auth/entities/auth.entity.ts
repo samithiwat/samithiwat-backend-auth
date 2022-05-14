@@ -14,6 +14,7 @@ export class Auth extends BaseEntity {
   @Column({ name: 'is_email_verified', default: false })
   isEmailVerified: boolean;
 
+  @Index({ unique: true })
   @Column({ name: 'user_id', nullable: true })
   userId: number;
 
