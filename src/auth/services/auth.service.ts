@@ -6,13 +6,18 @@ import { ServiceType } from 'src/common/enum/auth.enum';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { UserService } from 'src/user/user.service';
 import { Repository } from 'typeorm';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 import { CreateTokenDto } from '../dto/create-token.dto';
 import { CredentialDto } from '../dto/credential.dto';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ResponseDto } from '../dto/response.dto';
 import { Auth } from '../entities/auth.entity';
-import { LoginResponse, RegisterResponse } from '../interface/auth.interface';
+import {
+  ChangePasswordResponse,
+  LoginResponse,
+  RegisterResponse,
+} from '../interface/auth.interface';
 import { JwtService } from './jwt.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { TokenService } from './token.service';
@@ -98,8 +103,35 @@ export class AuthService {
     return res;
   }
 
-  async changePassword(id: number, password: string): Promise<boolean> {
-    return true;
+  async changePassword(changePasswordDto: ChangePasswordDto): Promise<ChangePasswordResponse> {
+    const res = new ResponseDto({
+      statusCode: HttpStatus.OK,
+      errors: null,
+      data: false,
+    });
+
+    const auth = await this.authRepository.findOne({ userId: changePasswordDto.userId });
+
+    if (!auth) {
+      res.statusCode = HttpStatus.UNAUTHORIZED;
+      res.errors = ['Invalid userId or password'];
+      return res;
+    }
+
+    const isValid = await this.isValidPassword(changePasswordDto.oldPassword, auth.password);
+    if (!isValid) {
+      res.statusCode = HttpStatus.UNAUTHORIZED;
+      res.errors = ['Invalid userId or password'];
+      return res;
+    }
+
+    const newPassword = await this.hashPassword(changePasswordDto.newPassword);
+    auth.password = newPassword;
+
+    await this.authRepository.save(auth);
+    res.data = true;
+
+    return res;
   }
 
   validate(id: number) {
