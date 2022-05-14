@@ -87,7 +87,7 @@ describe('AuthController', () => {
       const res = await controller.register({ register: dto });
 
       expect(res).toStrictEqual(want);
-      expect(MockAuthService.register).lastReturnedWith(dto);
+      expect(MockAuthService.register).toBeCalledWith(dto);
     });
   });
 
@@ -109,7 +109,7 @@ describe('AuthController', () => {
       const res = await controller.login({ login: dto });
 
       expect(res).toStrictEqual(want);
-      expect(MockAuthService.login).lastReturnedWith(dto);
+      expect(MockAuthService.login).toBeCalledWith(dto);
     });
   });
 
@@ -143,7 +143,7 @@ describe('AuthController', () => {
       const res = await controller.validate({ token: credential.accessToken });
 
       expect(res).toStrictEqual(want);
-      expect(MockAuthService.changePassword).toHaveBeenCalledWith(credential.accessToken);
+      expect(MockAuthService.validate).toHaveBeenCalledWith(credential.accessToken);
     });
   });
 
@@ -183,7 +183,7 @@ describe('AuthController', () => {
       const res = await controller.refreshToken({ refreshToken: credential.refreshToken });
 
       expect(res).toStrictEqual(want);
-      expect(MockAuthService.changePassword).toHaveBeenCalledWith(credential.refreshToken);
+      expect(MockAuthService.refreshToken).toHaveBeenCalledWith(credential.refreshToken);
     });
   });
 });
