@@ -1,6 +1,7 @@
 import { BaseEntity } from 'src/common/entity/base.entity';
 import { ServiceType } from 'src/common/enum/auth.enum';
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import { Auth } from './auth.entity';
 
 @Entity()
 export class Token extends BaseEntity {
@@ -22,6 +23,9 @@ export class Token extends BaseEntity {
 
   @Column({ name: 'expires_date' })
   expiresDate: Date;
+
+  @ManyToOne(() => Auth, auth => auth.tokens)
+  auth: Auth;
 
   constructor(partial: Partial<Token>) {
     super(partial);
