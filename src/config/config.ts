@@ -11,7 +11,7 @@ export default () => ({
     origin: true,
   },
   user: {
-    host: process.env.USER_SERVICE_HOST || 'localhost',
+    host: process.env.USER_SERVICE_HOST || 'localhost:3002',
   },
   jwt: {
     secret: process.env.JWT_SECRET,
