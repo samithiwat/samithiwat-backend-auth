@@ -1,3 +1,4 @@
+import { Observable } from 'rxjs';
 import { BaseResponse } from 'src/common/interface/base.interface';
 import { CreateUserDto } from './dto/create-user.dto';
 
@@ -9,11 +10,11 @@ export interface UserDto {
 }
 
 export interface UserService {
-  create(req: CreateUserRequest): UserResponse;
+  create(req: CreateUserRequest): Observable<UserResponse>;
 }
 
 export interface CreateUserRequest {
-  createUserDto: CreateUserDto;
+  user: CreateUserDto;
 }
 
 export interface UserResponse extends BaseResponse {

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientGrpc } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponse, UserService as UserSrv } from './user.interface';
 
@@ -14,6 +15,6 @@ export class UserService {
   }
 
   async create(createUserDto: CreateUserDto): Promise<UserResponse> {
-    return this.userService.create({ createUserDto });
+    return firstValueFrom(this.userService.create({ user: createUserDto }));
   }
 }
