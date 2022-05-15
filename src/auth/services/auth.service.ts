@@ -38,6 +38,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto): Promise<RegisterResponse> {
+    console.log(registerDto);
     const res = new ResponseDto({
       statusCode: HttpStatus.CREATED,
       errors: null,
@@ -78,6 +79,7 @@ export class AuthService {
       { email: loginDto.email },
       { relations: ['tokens'] },
     );
+
     if (!auth) {
       res.statusCode = HttpStatus.UNAUTHORIZED;
       res.errors = ['Invalid email or password'];
@@ -254,6 +256,7 @@ export class AuthService {
     const existedToken = auth.tokens.find(token => token.serviceType === newToken.serviceType);
 
     if (!existedToken) {
+      newToken.auth = new Auth({ id: auth.id });
       const res = await this.tokenService.create(newToken);
       return res.data;
     }

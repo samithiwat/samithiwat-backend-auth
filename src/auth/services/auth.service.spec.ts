@@ -243,6 +243,7 @@ describe('AuthService', () => {
 
       const mockTokenDto = new CreateTokenDto({});
       Object.assign(mockTokenDto, mockToken);
+      mockTokenDto.auth = new Auth({ id: mockAuth.id });
 
       const mockAnotherToken = new Token({});
       Object.assign(mockAnotherToken, mockToken);
