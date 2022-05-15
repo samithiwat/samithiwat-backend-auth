@@ -24,7 +24,7 @@ message RegisterRequest{
 message RegisterResponse{
   int32 StatusCode = 1;
   repeated string errors = 2;
-  repeated dto.User data = 3;
+  dto.User data = 3;
 }
 
 // Login
@@ -36,7 +36,7 @@ message LoginRequest{
 message LoginResponse{
   int32 StatusCode = 1;
   repeated string errors = 2;
-  repeated dto.Credential data = 3;
+  dto.Credential data = 3;
 }
 
 // Logout
@@ -48,7 +48,7 @@ message LogoutRequest{
 message LogoutResponse{
   int32 StatusCode = 1;
   repeated string errors = 2;
-  repeated bool data = 3;
+  bool data = 3;
 }
 
 // Change Password
