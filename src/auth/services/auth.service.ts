@@ -38,7 +38,6 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto): Promise<RegisterResponse> {
-    console.log(registerDto);
     const res = new ResponseDto({
       statusCode: HttpStatus.CREATED,
       errors: null,
