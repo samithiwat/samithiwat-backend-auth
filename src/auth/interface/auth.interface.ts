@@ -22,7 +22,7 @@ export interface LoginResponse extends BaseResponse {
 }
 
 export interface LogoutRequest {
-  token: string;
+  userId: number;
 }
 
 export interface LogoutResponse extends BaseResponse {
