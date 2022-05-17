@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import * as moment from 'moment';
 import { ServiceType } from 'src/common/enum/auth.enum';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { UserService } from 'src/user/user.service';
@@ -46,9 +47,8 @@ export class AuthService {
 
     registerDto.password = await this.hashPassword(registerDto.password);
 
-    try {
-      await this.authRepository.save(registerDto);
-    } catch (err) {
+    const nEmail = await this.authRepository.count({ email: registerDto.email });
+    if (nEmail > 0) {
       res.statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
       res.errors = ['Email is already existed'];
       return res;
@@ -62,6 +62,7 @@ export class AuthService {
     });
 
     const userRes = await this.userService.create(userDto);
+    await this.authRepository.save({ ...registerDto, userId: userRes.data.id });
 
     res.data = userRes.data;
     return res;
@@ -242,13 +243,17 @@ export class AuthService {
   }
 
   async validateToken(token: string): Promise<Auth> {
-    const decoded = await this.jwtService.decode(token);
+    const auth = await this.jwtService.validate(token);
 
-    if (!decoded) {
+    if (!auth) {
       return null;
     }
 
-    return await this.jwtService.findFromPayload(decoded);
+    if (moment(auth.tokens[0].expiresDate).isBefore(new Date())) {
+      return null;
+    }
+
+    return auth;
   }
 
   async storeToken(auth: Auth, newToken: CreateTokenDto): Promise<Token> {

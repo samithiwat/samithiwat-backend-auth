@@ -16,8 +16,12 @@ export class JwtService {
     return this.jwtService.decode(token) as TokenPayload;
   }
 
-  async findFromPayload(decode: TokenPayload): Promise<Auth> {
-    return this.authRepository.findOne({ id: decode.id });
+  async validate(accessToken: string): Promise<Auth> {
+    return this.authRepository
+      .createQueryBuilder('auth')
+      .leftJoinAndSelect('auth.tokens', 'token')
+      .where('token.accessToken = :accessToken', { accessToken })
+      .getOne();
   }
 
   async generate(auth: Auth): Promise<string> {
