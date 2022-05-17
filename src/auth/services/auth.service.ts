@@ -265,6 +265,9 @@ export class AuthService {
       return res.data;
     }
 
+    newToken.expiresDate = moment()
+      .add(parseInt(this.configService.get<string>('jwt.tokenDuration')), 's')
+      .toDate();
     const res = await this.tokenService.update(existedToken.id, newToken);
     return res.data;
   }
