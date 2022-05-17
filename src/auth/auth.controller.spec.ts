@@ -124,10 +124,10 @@ describe('AuthController', () => {
 
       MockAuthService.logout.mockResolvedValue(want);
 
-      const res = await controller.logout({ token: credential.accessToken });
+      const res = await controller.logout({ userId: 1 });
 
       expect(res).toStrictEqual(want);
-      expect(MockAuthService.logout).toHaveBeenCalledWith(credential.accessToken);
+      expect(MockAuthService.logout).toHaveBeenCalledWith(1);
     });
   });
 

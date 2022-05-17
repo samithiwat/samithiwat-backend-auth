@@ -383,28 +383,34 @@ describe('AuthService', () => {
 
       mockAuth.tokens = [mockToken];
 
-      jest.spyOn(service, 'validateToken').mockResolvedValue(mockAuth);
+      MockAuthRepository.findOne.mockResolvedValue(mockAuth);
       MockTokenService.remove.mockResolvedValue(mockToken);
 
-      const res = await service.logout(mockCredentialDto.accessToken);
+      const res = await service.logout(mockAuth.userId);
       expect(res).toStrictEqual(want);
-      expect(service.validateToken).toBeCalledWith(mockCredentialDto.accessToken);
+      expect(MockAuthRepository.findOne).toBeCalledWith(
+        { userId: mockAuth.userId },
+        { relations: ['tokens'] },
+      );
       expect(MockTokenService.remove).toBeCalledWith(1);
       expect(MockTokenService.remove).toBeCalledTimes(1);
     });
 
-    it('should throw error if invalid token', async () => {
+    it('should throw error if invalid user id', async () => {
       const want = new ResponseDto({
-        statusCode: HttpStatus.UNAUTHORIZED,
-        errors: ['Invalid token'],
+        statusCode: HttpStatus.BAD_REQUEST,
+        errors: ['Invalid user id'],
         data: null,
       });
 
-      jest.spyOn(service, 'validateToken').mockResolvedValue(null);
+      MockAuthRepository.findOne.mockResolvedValue(undefined);
 
-      const res = await service.logout(mockCredentialDto.accessToken);
+      const res = await service.logout(mockAuth.userId);
       expect(res).toStrictEqual(want);
-      expect(service.validateToken).toBeCalledWith(mockCredentialDto.accessToken);
+      expect(MockAuthRepository.findOne).toBeCalledWith(
+        { userId: mockAuth.userId },
+        { relations: ['tokens'] },
+      );
       expect(MockTokenService.remove).toBeCalledTimes(0);
     });
   });

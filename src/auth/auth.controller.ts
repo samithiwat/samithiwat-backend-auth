@@ -32,7 +32,7 @@ export class AuthController {
 
   @GrpcMethod('AuthService', 'Logout')
   async logout(req: LogoutRequest): Promise<LogoutResponse> {
-    return this.authService.logout(req.token);
+    return this.authService.logout(req.userId);
   }
 
   @GrpcMethod('AuthService', 'ChangePassword')
