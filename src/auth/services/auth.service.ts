@@ -119,18 +119,18 @@ export class AuthService {
     return res;
   }
 
-  async logout(token: string): Promise<LogoutResponse> {
+  async logout(userId: number): Promise<LogoutResponse> {
     const res = new ResponseDto({
       statusCode: HttpStatus.NO_CONTENT,
       errors: null,
       data: null,
     });
 
-    const auth = await this.validateToken(token);
+    const auth = await this.authRepository.findOne({ userId }, { relations: ['tokens'] });
 
     if (!auth) {
-      res.statusCode = HttpStatus.UNAUTHORIZED;
-      res.errors = ['Invalid token'];
+      res.statusCode = HttpStatus.BAD_REQUEST;
+      res.errors = ['Invalid user id'];
       return res;
     }
 
