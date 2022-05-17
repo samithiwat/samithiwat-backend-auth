@@ -238,6 +238,7 @@ describe('TokenService', () => {
 
       MockTokenRepository.save.mockResolvedValue(mockToken);
       MockTokenRepository.findOne.mockResolvedValue(want);
+      jest.spyOn(tokenService, 'encode').mockResolvedValue(mockToken.refreshToken);
 
       const dto = new UpdateTokenDto();
       const res = await tokenService.update(1, dto);
