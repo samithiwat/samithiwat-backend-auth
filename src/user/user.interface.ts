@@ -3,6 +3,7 @@ import { BaseResponse } from 'src/common/interface/base.interface';
 import { CreateUserDto } from './dto/create-user.dto';
 
 export interface UserDto {
+  id: number;
   firstname: string;
   lastname: string;
   displayName: string;
