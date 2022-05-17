@@ -78,6 +78,11 @@ export class TokenService {
 
     try {
       const token = await this.tokenRepository.save({ id, ...updateTokenDto });
+
+      if (token.serviceType === ServiceType.APP) {
+        token.refreshToken = await this.encode(token.refreshToken);
+      }
+
       searchResult.data = token;
     } catch (err) {
       searchResult.statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
