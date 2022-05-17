@@ -14,6 +14,7 @@ export class Token extends BaseEntity {
   @Column({ name: 'id_token', nullable: true })
   idToken: string;
 
+  @Index()
   @Column({ name: 'access_token', nullable: true })
   accessToken: string;
 
