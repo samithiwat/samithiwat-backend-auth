@@ -39,6 +39,7 @@ describe('AuthController', () => {
     }).compile();
 
     user = {
+      id: 1,
       firstname: faker.name.firstName(),
       lastname: faker.name.lastName(),
       displayName: faker.internet.userName(),
