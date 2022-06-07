@@ -24,7 +24,7 @@
     "typeorm:create": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/migration.ts migration:create -n",
     "typeorm:run": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/migration.ts migration:run",
     "typeorm:revert": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/migration.ts migration:revert",
-    "typeorm:prod": "node ./node_modules/typeorm/cli.js --config dist/config/typeorm.js migration:run",
+    "typeorm:prod": "node ./node_modules/typeorm/cli.js --config dist/config/migration.js migration:run",
     "ci": "yarn && yarn format && yarn lint",
     "lint:ci": "eslint --output-file eslint_report.json --format json src",
     "test:ci": "jest --coverage --ci --testLocationInResults --json --outputFile=\"report.json\""
